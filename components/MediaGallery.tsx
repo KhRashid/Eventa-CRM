@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Venue } from '../types';
 import { CloseIcon, ChevronLeftIcon, ChevronRightIcon, AddIcon, TrashIcon } from '../icons';
+import { uploadFileToStorage } from '../services/firebaseService';
 
 interface MediaGalleryProps {
   venue: Venue | null;
@@ -10,35 +11,50 @@ interface MediaGalleryProps {
 const MediaGallery: React.FC<MediaGalleryProps> = ({ venue, onVenueUpdate }) => {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const photos = venue?.media?.photos ?? [];
   const videos = venue?.media?.videos ?? [];
 
-  const handleAddPhoto = () => {
-    const newPhotoUrl = prompt("Введите URL нового фото:");
-    if (newPhotoUrl && venue) {
-        const updatedVenue = {
-            ...venue,
-            media: {
-                ...venue.media,
-                photos: [...venue.media.photos, newPhotoUrl],
-            },
-        };
-        onVenueUpdate(updatedVenue);
-    }
-  };
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, fileType: 'photo' | 'video') => {
+    const file = event.target.files?.[0];
+    if (!file || !venue) return;
 
-  const handleAddVideo = () => {
-    const newVideoUrl = prompt("Введите URL нового видео:");
-    if (newVideoUrl && venue) {
-        const updatedVenue = {
-            ...venue,
-            media: {
-                ...venue.media,
-                videos: [...venue.media.videos, newVideoUrl],
-            },
-        };
-        onVenueUpdate(updatedVenue);
+    setIsUploading(true);
+    try {
+        const downloadURL = await uploadFileToStorage(file);
+        
+        let updatedVenue: Venue;
+        if (fileType === 'photo') {
+            updatedVenue = {
+                ...venue,
+                media: {
+                    ...venue.media,
+                    photos: [...venue.media.photos, downloadURL],
+                },
+            };
+        } else {
+            updatedVenue = {
+                ...venue,
+                media: {
+                    ...venue.media,
+                    videos: [...venue.media.videos, downloadURL],
+                },
+            };
+        }
+        await onVenueUpdate(updatedVenue);
+    } catch (error) {
+        console.error(`Failed to upload ${fileType}:`, error);
+        alert(`Не удалось загрузить ${fileType === 'photo' ? 'фото' : 'видео'}.`);
+    } finally {
+        setIsUploading(false);
+        // Reset file input
+        if (event.target) {
+            event.target.value = '';
+        }
     }
   };
 
@@ -100,16 +116,25 @@ const MediaGallery: React.FC<MediaGalleryProps> = ({ venue, onVenueUpdate }) => 
 
   return (
     <div className="bg-gray-800 rounded-lg shadow overflow-hidden h-full flex flex-col">
+       <input type="file" ref={photoInputRef} onChange={(e) => handleFileSelect(e, 'photo')} accept="image/*" style={{ display: 'none' }} />
+       <input type="file" ref={videoInputRef} onChange={(e) => handleFileSelect(e, 'video')} accept="video/*" style={{ display: 'none' }} />
+
       <div className="p-4 border-b border-gray-700 flex justify-between items-center">
         <h3 className="text-lg font-bold">Медиа</h3>
         <div className="flex space-x-2">
-            <button onClick={handleAddPhoto} className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-semibold transition-colors">
-                <AddIcon />
-                <span>Фото</span>
+            <button 
+                onClick={() => photoInputRef.current?.click()} 
+                disabled={isUploading}
+                className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-semibold transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+            >
+                {isUploading ? <span>Загрузка...</span> : <><AddIcon /><span>Фото</span></>}
             </button>
-            <button onClick={handleAddVideo} className="flex items-center space-x-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-xs font-semibold transition-colors">
-                <AddIcon />
-                <span>Видео</span>
+            <button 
+                onClick={() => videoInputRef.current?.click()} 
+                disabled={isUploading}
+                className="flex items-center space-x-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-xs font-semibold transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+            >
+                {isUploading ? <span>Загрузка...</span> : <><AddIcon /><span>Видео</span></>}
             </button>
         </div>
       </div>
