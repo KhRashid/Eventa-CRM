@@ -1,22 +1,24 @@
-// fix: Use namespace import for firestore to maintain consistency with firebaseConfig.ts and avoid potential module resolution issues.
-import * as firestore from "firebase/firestore";
-import { db } from '../firebaseConfig';
+// fix: Use Firebase v9 compat libraries to support v8 syntax.
+import firebase from "firebase/compat/app";
+import "firebase/compat/firestore";
+import "firebase/compat/storage";
+import { db, storage } from '../firebaseConfig';
 import { Venue } from '../types';
 
-const venuesCollectionRef = firestore.collection(db, 'venues');
+const venuesCollectionRef = db.collection('venues');
 
 // Helper to convert Firestore doc to Venue type
-const docToVenue = (docSnap: firestore.DocumentSnapshot<firestore.DocumentData>): Venue => {
+const docToVenue = (docSnap: firebase.firestore.DocumentSnapshot): Venue => {
     const data = docSnap.data();
     if (!data) {
         throw new Error(`Document data not found for doc id: ${docSnap.id}`);
     }
 
-    const mapDataToVenue = (data: firestore.DocumentData): Partial<Venue> => {
+    const mapDataToVenue = (data: firebase.firestore.DocumentData): Partial<Venue> => {
         const venueData: any = {};
         for (const key in data) {
-            if (data[key] instanceof firestore.Timestamp) {
-                venueData[key] = (data[key] as firestore.Timestamp).toDate().toISOString();
+            if (data[key] instanceof firebase.firestore.Timestamp) {
+                venueData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
             } else {
                 venueData[key] = data[key];
             }
@@ -32,8 +34,8 @@ const docToVenue = (docSnap: firestore.DocumentSnapshot<firestore.DocumentData>)
 
 
 export const fetchData = async (): Promise<Venue[]> => {
-  const q = firestore.query(venuesCollectionRef, firestore.orderBy('created_at', 'desc'));
-  const querySnapshot = await firestore.getDocs(q);
+  const q = venuesCollectionRef.orderBy('created_at', 'desc');
+  const querySnapshot = await q.get();
   return querySnapshot.docs.map(docToVenue);
 };
 
@@ -43,15 +45,15 @@ export const updateData = async (venue: Venue): Promise<Venue> => {
   // @ts-ignore
   delete venueData.id;
   
-  const venueDocRef = firestore.doc(db, 'venues', id);
+  const venueDocRef = db.collection('venues').doc(id);
 
-  await firestore.updateDoc(venueDocRef, {
+  await venueDocRef.update({
       ...venueData,
-      updated_at: firestore.serverTimestamp(),
+      updated_at: firebase.firestore.FieldValue.serverTimestamp(),
   });
   
-  const updatedDocSnapshot = await firestore.getDoc(venueDocRef);
-  if (updatedDocSnapshot.exists()) {
+  const updatedDocSnapshot = await venueDocRef.get();
+  if (updatedDocSnapshot.exists) {
       return docToVenue(updatedDocSnapshot);
   } else {
       throw new Error("Failed to fetch updated document");
@@ -61,8 +63,8 @@ export const updateData = async (venue: Venue): Promise<Venue> => {
 export const createData = async (): Promise<Venue> => {
     const newVenueData = {
         name: 'Новый ресторан',
-        created_at: firestore.serverTimestamp(),
-        updated_at: firestore.serverTimestamp(),
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
         address: '',
         base_rental_fee_azn: 0,
         capacity_max: 0,
@@ -87,9 +89,9 @@ export const createData = async (): Promise<Venue> => {
         tags: [],
     };
 
-    const docRef = await firestore.addDoc(venuesCollectionRef, newVenueData);
-    const newDocSnapshot = await firestore.getDoc(docRef);
-    if (newDocSnapshot.exists()) {
+    const docRef = await venuesCollectionRef.add(newVenueData);
+    const newDocSnapshot = await docRef.get();
+    if (newDocSnapshot.exists) {
       return docToVenue(newDocSnapshot);
     } else {
         // Fallback for optimistic update if getDoc fails immediately
@@ -103,6 +105,14 @@ export const createData = async (): Promise<Venue> => {
 };
 
 export const deleteData = async (venueId: string): Promise<void> => {
-  const venueDocRef = firestore.doc(db, 'venues', venueId);
-  await firestore.deleteDoc(venueDocRef);
+  const venueDocRef = db.collection('venues').doc(venueId);
+  await venueDocRef.delete();
+};
+
+export const uploadFileToStorage = async (file: File): Promise<string> => {
+    const fileName = `${new Date().getTime()}_${file.name}`;
+    const storageRef = storage.ref(`venues/${fileName}`);
+    const uploadTask = await storageRef.put(file);
+    const downloadURL = await uploadTask.ref.getDownloadURL();
+    return downloadURL;
 };
