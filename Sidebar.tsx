@@ -24,7 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
   
   const handleNavigationClick = (pageId: string) => {
     // Enable navigation only for existing pages
-    if (['restaurants', 'artists'].includes(pageId)) {
+    if (['restaurants', 'artists', 'cars'].includes(pageId)) {
       onNavigate(pageId);
     } else {
       // Optionally, you can add a notification for non-implemented pages

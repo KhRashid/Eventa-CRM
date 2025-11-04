@@ -6,6 +6,7 @@ import MediaGallery from './components/MediaGallery';
 import { Venue } from './types';
 import { fetchData, updateData, createData, deleteData } from './services/firebaseService';
 import ArtistsPage from './components/ArtistsPage';
+import CarsPage from './components/CarsPage';
 
 const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -125,6 +126,7 @@ const App: React.FC = () => {
           </>
         )}
         {currentPage === 'artists' && <ArtistsPage />}
+        {currentPage === 'cars' && <CarsPage />}
       </main>
     </div>
   );

@@ -1,6 +1,7 @@
-// fix: Use namespace imports for Firebase modules to resolve module resolution error.
-import * as firebase from "firebase/app";
-import * as firestore from "firebase/firestore";
+// fix: Use Firebase v9 compat libraries to support v8 syntax.
+import firebase from "firebase/compat/app";
+import "firebase/compat/firestore";
+import "firebase/compat/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyANblr6MInsVbY9LnN3OUHNA5Ri2ttPHCo",
@@ -13,10 +14,11 @@ const firebaseConfig = {
   measurementId: "G-4H9BVWN184"
 };
 
-// Initialize Firebase using the modern v9+ modular API
-const app = firebase.initializeApp(firebaseConfig);
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
 
 // Get a Firestore instance
-const db = firestore.getFirestore(app);
+const db = firebase.firestore();
+const storage = firebase.storage();
 
-export { db };
+export { db, storage };
