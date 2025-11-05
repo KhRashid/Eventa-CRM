@@ -3,8 +3,8 @@ import Sidebar from './Sidebar';
 import DataTable from './components/DataTable';
 import DetailsPanel from './components/DetailsPanel';
 import MediaGallery from './components/MediaGallery';
-import { Venue, UserProfile, Role } from './types';
-import { fetchData, updateData, createData, deleteData, getUserProfile, getRoles } from './services/firebaseService';
+import { Venue } from './types';
+import { fetchData, updateData, createData, deleteData } from './services/firebaseService';
 import ArtistsPage from './components/ArtistsPage';
 import CarsPage from './components/CarsPage';
 import UsersPage from './components/UsersPage';
@@ -12,10 +12,7 @@ import RoleManagementPage from './components/RoleManagementPage';
 import ProfilePage from './components/ProfilePage';
 import LoginPage from './components/LoginPage';
 import { auth } from './firebaseConfig';
-import firebase from "firebase/compat/app";
-import AiAssistantButton from './components/AiAssistantButton';
-import AiAssistantModal from './components/AiAssistantModal';
-
+import { User } from 'firebase/compat/app';
 
 const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -25,49 +22,19 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState('restaurants');
-  const [user, setUser] = useState<firebase.User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [userPermissions, setUserPermissions] = useState<Set<string>>(new Set());
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-        if (user) {
-            setUser(user);
-            try {
-                // This call ensures a user document is created in Firestore if it doesn't exist.
-                const profile = await getUserProfile(user.uid);
-                setUserProfile(profile);
-
-                const roles = await getRoles();
-                const assignedRoles = roles.filter(role => profile.roleIds?.includes(role.id));
-                
-                const permissions = new Set<string>();
-                assignedRoles.forEach(role => {
-                    role.permissions.forEach(p => permissions.add(p));
-                });
-                setUserPermissions(permissions);
-
-            } catch (e) {
-                console.error("Failed to load user profile and permissions:", e);
-                setError("Не удалось загрузить права пользователя.");
-                setUserPermissions(new Set());
-            }
-        } else {
-            setUser(null);
-            setUserProfile(null);
-            setUserPermissions(new Set());
-        }
-        setAuthLoading(false);
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      setUser(user);
+      setAuthLoading(false);
     });
     return () => unsubscribe();
-}, []);
-
+  }, []);
 
   useEffect(() => {
-    if (user && currentPage === 'restaurants' && userPermissions.has('restaurants:read')) {
+    if (user && currentPage === 'restaurants') {
       const getData = async () => {
         try {
           setLoading(true);
@@ -83,12 +50,8 @@ const App: React.FC = () => {
       };
 
       getData();
-    } else if (user && currentPage === 'restaurants') {
-        setLoading(false);
-        setError('У вас нет прав для просмотра этого раздела.');
-        setVenues([]);
     }
-  }, [currentPage, user, userPermissions]);
+  }, [currentPage, user]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -165,11 +128,10 @@ const App: React.FC = () => {
                   onRowSelect={handleRowSelect} 
                   selectedVenueId={selectedVenue?.id ?? null} 
                   onVenueCreate={handleVenueCreate}
-                  permissions={userPermissions}
                 />
               </div>
               <div className="h-2/5">
-                <MediaGallery venue={selectedVenue} onVenueUpdate={handleVenueUpdate} permissions={userPermissions} />
+                <MediaGallery venue={selectedVenue} onVenueUpdate={handleVenueUpdate} />
               </div>
             </div>
             <div className="w-1/3">
@@ -179,7 +141,6 @@ const App: React.FC = () => {
                   onVenueDelete={handleVenueDelete}
                   isEditing={isEditing}
                   setIsEditing={setIsEditing}
-                  permissions={userPermissions}
                 />
             </div>
           </>
@@ -189,9 +150,9 @@ const App: React.FC = () => {
       case 'cars':
         return <CarsPage />;
       case 'users':
-        return <UsersPage permissions={userPermissions} />;
+        return <UsersPage />;
       case 'roles':
-        return <RoleManagementPage permissions={userPermissions} />;
+        return <RoleManagementPage />;
       case 'profile':
         return <ProfilePage user={user!} />;
       default:
@@ -220,13 +181,10 @@ const App: React.FC = () => {
         currentPage={currentPage}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
-        permissions={userPermissions}
       />
       <main className="flex-1 p-6 flex space-x-6 overflow-hidden">
         {renderPage()}
       </main>
-      <AiAssistantButton onClick={() => setIsAiModalOpen(true)} />
-      {isAiModalOpen && <AiAssistantModal venue={selectedVenue} onClose={() => setIsAiModalOpen(false)} />}
     </div>
   );
 };

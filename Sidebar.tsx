@@ -7,10 +7,9 @@ interface SidebarProps {
   currentPage: string;
   onNavigate: (page: string) => void;
   onLogout: () => void;
-  permissions: Set<string>;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, onNavigate, onLogout, permissions }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, onNavigate, onLogout }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const menuItems = [
@@ -21,8 +20,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
   ];
   
   const settingsSubMenuItems = [
-      { icon: <RoleManagementIcon />, name: 'Role Management', id: 'roles', permission: 'roles:read' },
-      { icon: <UsersIcon />, name: 'Users', id: 'users', permission: 'users:read' },
+      { icon: <RoleManagementIcon />, name: 'Role Management', id: 'roles' },
+      { icon: <UsersIcon />, name: 'Users', id: 'users' },
   ]
 
   const bottomItems = [
@@ -35,7 +34,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
   };
   
   const isSettingsActive = currentPage === 'users' || currentPage === 'roles';
-  const canViewSettings = permissions.has('users:read') || permissions.has('roles:read');
 
   return (
     <div className={`bg-black h-full text-white flex flex-col transition-all duration-300 ease-in-out ${isOpen ? 'w-64' : 'w-20'}`}>
@@ -63,46 +61,43 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
         ))}
         
         {/* Settings Dropdown */}
-        {canViewSettings && (
-            <div>
-                <button
-                    type="button"
-                    onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors duration-200 text-left ${
-                        isSettingsActive ? 'bg-blue-600' : 'hover:bg-gray-800'
-                    }`}
-                >
-                    <div className="flex items-center">
-                        <div className="flex-shrink-0 w-6 h-6"><SettingsIcon /></div>
-                        <span className={`ml-4 font-semibold transition-opacity duration-300 ${!isOpen && 'opacity-0 hidden'}`}>Settings</span>
-                    </div>
-                    {isOpen && (
-                        <span className={`transition-transform duration-300 ${isSettingsOpen ? 'rotate-180' : ''}`}>
-                            <ChevronDownIcon />
-                        </span>
-                    )}
-                </button>
-                {isSettingsOpen && isOpen && (
-                    <div className="mt-2 pl-8 space-y-2">
-                         {settingsSubMenuItems.map((item) => (
-                            permissions.has(item.permission) && (
-                                <button
-                                    key={item.id}
-                                    type="button"
-                                    onClick={() => handleNavigationClick(item.id)}
-                                    className={`w-full flex items-center p-2 rounded-lg transition-colors duration-200 text-left text-sm ${
-                                        currentPage === item.id ? 'bg-blue-600' : 'hover:bg-gray-800'
-                                    }`}
-                                >
-                                    <div className="flex-shrink-0 w-5 h-5">{item.icon}</div>
-                                    <span className="ml-3 font-medium">{item.name}</span>
-                                </button>
-                            )
-                         ))}
-                    </div>
+        <div>
+            <button
+                type="button"
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors duration-200 text-left ${
+                    isSettingsActive ? 'bg-blue-600' : 'hover:bg-gray-800'
+                }`}
+            >
+                <div className="flex items-center">
+                    <div className="flex-shrink-0 w-6 h-6"><SettingsIcon /></div>
+                    <span className={`ml-4 font-semibold transition-opacity duration-300 ${!isOpen && 'opacity-0 hidden'}`}>Settings</span>
+                </div>
+                {isOpen && (
+                    <span className={`transition-transform duration-300 ${isSettingsOpen ? 'rotate-180' : ''}`}>
+                        <ChevronDownIcon />
+                    </span>
                 )}
-            </div>
-        )}
+            </button>
+            {isSettingsOpen && isOpen && (
+                <div className="mt-2 pl-8 space-y-2">
+                     {settingsSubMenuItems.map((item) => (
+                        <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleNavigationClick(item.id)}
+                            className={`w-full flex items-center p-2 rounded-lg transition-colors duration-200 text-left text-sm ${
+                                currentPage === item.id ? 'bg-blue-600' : 'hover:bg-gray-800'
+                            }`}
+                        >
+                            <div className="flex-shrink-0 w-5 h-5">{item.icon}</div>
+                            <span className="ml-3 font-medium">{item.name}</span>
+                        </button>
+                     ))}
+                </div>
+            )}
+        </div>
+        
       </nav>
 
       <div className="px-4 py-6 border-t border-gray-800 space-y-4">
