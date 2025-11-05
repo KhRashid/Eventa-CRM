@@ -126,17 +126,9 @@ export const ChevronDownIcon: React.FC = () => (
     </svg>
 );
 
-// fix: Add missing GeminiIcon component
+// fix: Add missing GeminiIcon component.
 export const GeminiIcon: React.FC = () => (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-6 w-6"
-    >
-      <path d="M12 2.75L14.285 6.25L18.5 6.875L15.375 9.75L16.25 14L12 11.875L7.75 14L8.625 9.75L5.5 6.875L9.715 6.25L12 2.75Z" />
-      <path d="M12 14.75L13.215 17.25L16 17.625L13.875 19.5L14.5 22.25L12 20.875L9.5 22.25L10.125 19.5L8 17.625L10.785 17.25L12 14.75Z" opacity="0.6"/>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 0l3.09 8.91L24 12l-8.91 3.09L12 24l-3.09-8.91L0 12l8.91-3.09L12 0z"/>
     </svg>
-  );
+);

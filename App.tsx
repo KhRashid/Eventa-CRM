@@ -154,7 +154,7 @@ const App: React.FC = () => {
       case 'roles':
         return <RoleManagementPage />;
       case 'profile':
-        return <ProfilePage />;
+        return <ProfilePage user={user!} />;
       default:
         return <div className="text-center w-full">Выберите раздел</div>;
     }

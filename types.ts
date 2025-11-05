@@ -49,3 +49,22 @@ export interface Venue {
   suitable_for: string[];
   tags: string[];
 }
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  phone: string;
+  roleIds?: string[];
+}
+
+export interface Role {
+    id: string;
+    name: string;
+    description: string;
+    permissions: string[];
+}
+
+export interface UserWithRoles extends UserProfile {
+    roles: Role[];
+}
