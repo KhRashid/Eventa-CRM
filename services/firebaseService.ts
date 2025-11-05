@@ -133,10 +133,12 @@ export const getUserProfile = async (uid: string): Promise<UserProfile> => {
         const user = auth.currentUser;
         if (!user) throw new Error("Пользователь не аутентифицирован");
         
+        const defaultDisplayName = user.displayName || user.email?.split('@')[0] || 'Новый пользователь';
+
         const newUserProfile: UserProfile = {
             uid: user.uid,
             email: user.email || '',
-            displayName: user.displayName || 'Новый пользователь',
+            displayName: defaultDisplayName,
             phone: '',
             roleIds: [], // Default to no roles
         };
