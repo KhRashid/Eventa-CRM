@@ -7,6 +7,12 @@ import { Venue } from './types';
 import { fetchData, updateData, createData, deleteData } from './services/firebaseService';
 import ArtistsPage from './components/ArtistsPage';
 import CarsPage from './components/CarsPage';
+import UsersPage from './components/UsersPage';
+import RoleManagementPage from './components/RoleManagementPage';
+import ProfilePage from './components/ProfilePage';
+import LoginPage from './components/LoginPage';
+import { auth } from './firebaseConfig';
+import { User } from 'firebase/compat/app';
 
 const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -16,9 +22,19 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState('restaurants');
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    if (currentPage === 'restaurants') {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      setUser(user);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user && currentPage === 'restaurants') {
       const getData = async () => {
         try {
           setLoading(true);
@@ -35,7 +51,7 @@ const App: React.FC = () => {
 
       getData();
     }
-  }, [currentPage]);
+  }, [currentPage, user]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -43,6 +59,8 @@ const App: React.FC = () => {
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
+    setSelectedVenue(null);
+    setIsEditing(false);
   };
 
   const handleRowSelect = (venue: Venue) => {
@@ -88,19 +106,21 @@ const App: React.FC = () => {
     }
   };
 
-  return (
-    <div className="flex h-screen bg-gray-900 text-white">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        toggleSidebar={toggleSidebar} 
-        currentPage={currentPage}
-        onNavigate={handleNavigate}
-      />
-      <main className="flex-1 p-6 flex space-x-6 overflow-hidden">
-        {currentPage === 'restaurants' && (
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+    } catch (error) {
+      console.error("Ошибка выхода из системы:", error);
+    }
+  };
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'restaurants':
+        return (
           <>
             <div className="w-2/3 flex flex-col space-y-6">
-              <div className="h-3/5"> {/* 60% height */}
+              <div className="h-3/5">
                 <DataTable 
                   venues={venues}
                   loading={loading}
@@ -110,7 +130,7 @@ const App: React.FC = () => {
                   onVenueCreate={handleVenueCreate}
                 />
               </div>
-              <div className="h-2/5"> {/* 40% height */}
+              <div className="h-2/5">
                 <MediaGallery venue={selectedVenue} onVenueUpdate={handleVenueUpdate} />
               </div>
             </div>
@@ -124,9 +144,46 @@ const App: React.FC = () => {
                 />
             </div>
           </>
-        )}
-        {currentPage === 'artists' && <ArtistsPage />}
-        {currentPage === 'cars' && <CarsPage />}
+        );
+      case 'artists':
+        return <ArtistsPage />;
+      case 'cars':
+        return <CarsPage />;
+      case 'users':
+        return <UsersPage />;
+      case 'roles':
+        return <RoleManagementPage />;
+      case 'profile':
+        return <ProfilePage />;
+      default:
+        return <div className="text-center w-full">Выберите раздел</div>;
+    }
+  }
+
+  if (authLoading) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center bg-gray-900 text-white">
+            <p>Проверка сессии...</p>
+        </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
+
+  return (
+    <div className="flex h-screen bg-gray-900 text-white">
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar} 
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+      />
+      <main className="flex-1 p-6 flex space-x-6 overflow-hidden">
+        {renderPage()}
       </main>
     </div>
   );

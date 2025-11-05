@@ -1,36 +1,39 @@
-import React from 'react';
-import { HomeIcon, RestaurantIcon, ArtistIcon, CarIcon, UsersIcon, SettingsIcon, LogoutIcon, MenuIcon } from './icons';
+import React, { useState } from 'react';
+import { HomeIcon, RestaurantIcon, ArtistIcon, CarIcon, UsersIcon, SettingsIcon, LogoutIcon, MenuIcon, ProfileIcon, RoleManagementIcon, ChevronDownIcon } from './icons';
 
 interface SidebarProps {
   isOpen: boolean;
   toggleSidebar: () => void;
   currentPage: string;
   onNavigate: (page: string) => void;
+  onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, onNavigate }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, onNavigate, onLogout }) => {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
   const menuItems = [
     { icon: <HomeIcon />, name: 'Home', id: 'home' },
     { icon: <RestaurantIcon />, name: 'Restaurants', id: 'restaurants' },
     { icon: <ArtistIcon />, name: 'Artist', id: 'artists' },
     { icon: <CarIcon />, name: 'Cars', id: 'cars' },
-    { icon: <UsersIcon />, name: 'Users', id: 'users' },
   ];
+  
+  const settingsSubMenuItems = [
+      { icon: <RoleManagementIcon />, name: 'Role Management', id: 'roles' },
+      { icon: <UsersIcon />, name: 'Users', id: 'users' },
+  ]
 
   const bottomItems = [
-    { icon: <SettingsIcon />, name: 'Settings', id: 'settings' },
+    { icon: <ProfileIcon />, name: 'Profile', id: 'profile' },
     { icon: <LogoutIcon />, name: 'Logout', id: 'logout' },
   ];
   
   const handleNavigationClick = (pageId: string) => {
-    // Enable navigation only for existing pages
-    if (['restaurants', 'artists', 'cars'].includes(pageId)) {
       onNavigate(pageId);
-    } else {
-      // Optionally, you can add a notification for non-implemented pages
-      console.log(`Page "${pageId}" is not implemented yet.`);
-    }
   };
+  
+  const isSettingsActive = currentPage === 'users' || currentPage === 'roles';
 
   return (
     <div className={`bg-black h-full text-white flex flex-col transition-all duration-300 ease-in-out ${isOpen ? 'w-64' : 'w-20'}`}>
@@ -42,7 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
         </button>
       </div>
 
-      <nav className="flex-1 px-4 py-6 space-y-4">
+      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {menuItems.map((item) => (
           <button
             key={item.id}
@@ -56,6 +59,45 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
             <span className={`ml-4 font-semibold transition-opacity duration-300 ${!isOpen && 'opacity-0 hidden'}`}>{item.name}</span>
           </button>
         ))}
+        
+        {/* Settings Dropdown */}
+        <div>
+            <button
+                type="button"
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors duration-200 text-left ${
+                    isSettingsActive ? 'bg-blue-600' : 'hover:bg-gray-800'
+                }`}
+            >
+                <div className="flex items-center">
+                    <div className="flex-shrink-0 w-6 h-6"><SettingsIcon /></div>
+                    <span className={`ml-4 font-semibold transition-opacity duration-300 ${!isOpen && 'opacity-0 hidden'}`}>Settings</span>
+                </div>
+                {isOpen && (
+                    <span className={`transition-transform duration-300 ${isSettingsOpen ? 'rotate-180' : ''}`}>
+                        <ChevronDownIcon />
+                    </span>
+                )}
+            </button>
+            {isSettingsOpen && isOpen && (
+                <div className="mt-2 pl-8 space-y-2">
+                     {settingsSubMenuItems.map((item) => (
+                        <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleNavigationClick(item.id)}
+                            className={`w-full flex items-center p-2 rounded-lg transition-colors duration-200 text-left text-sm ${
+                                currentPage === item.id ? 'bg-blue-600' : 'hover:bg-gray-800'
+                            }`}
+                        >
+                            <div className="flex-shrink-0 w-5 h-5">{item.icon}</div>
+                            <span className="ml-3 font-medium">{item.name}</span>
+                        </button>
+                     ))}
+                </div>
+            )}
+        </div>
+        
       </nav>
 
       <div className="px-4 py-6 border-t border-gray-800 space-y-4">
@@ -63,9 +105,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
           <button
             key={item.id}
             type="button"
-            onClick={() => handleNavigationClick(item.id)}
+            onClick={() => (item.id === 'logout' ? onLogout() : handleNavigationClick(item.id))}
             className={`w-full flex items-center p-3 rounded-lg transition-colors duration-200 text-left ${
-                currentPage === item.id ? 'bg-blue-600' : 'hover:bg-gray-800'
+                (currentPage === item.id && item.id !== 'logout') ? 'bg-blue-600' : 'hover:bg-gray-800'
             }`}
           >
             <div className="flex-shrink-0 w-6 h-6">{item.icon}</div>
