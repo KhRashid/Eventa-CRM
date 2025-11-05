@@ -2,10 +2,14 @@
 import firebase from "firebase/compat/app";
 import "firebase/compat/firestore";
 import "firebase/compat/storage";
-import { db, storage } from '../firebaseConfig';
-import { Venue } from '../types';
+import { db, storage, auth } from '../firebaseConfig';
+import { Venue, UserProfile, Role, UserWithRoles } from '../types';
+import { INITIAL_ROLES } from "../constants";
 
 const venuesCollectionRef = db.collection('venues');
+const usersCollectionRef = db.collection('users');
+const rolesCollectionRef = db.collection('roles');
+
 
 // Helper to convert Firestore doc to Venue type
 const docToVenue = (docSnap: firebase.firestore.DocumentSnapshot): Venue => {
@@ -115,4 +119,103 @@ export const uploadFileToStorage = async (file: File): Promise<string> => {
     const uploadTask = await storageRef.put(file);
     const downloadURL = await uploadTask.ref.getDownloadURL();
     return downloadURL;
+};
+
+// --- User Profile Functions ---
+
+export const getUserProfile = async (uid: string): Promise<UserProfile> => {
+    const userDocRef = usersCollectionRef.doc(uid);
+    const docSnap = await userDocRef.get();
+
+    if (docSnap.exists) {
+        return docSnap.data() as UserProfile;
+    } else {
+        const user = auth.currentUser;
+        if (!user) throw new Error("Пользователь не аутентифицирован");
+        
+        const newUserProfile: UserProfile = {
+            uid: user.uid,
+            email: user.email || '',
+            displayName: user.displayName || 'Новый пользователь',
+            phone: '',
+            roleIds: [], // Default to no roles
+        };
+        await userDocRef.set(newUserProfile);
+        return newUserProfile;
+    }
+};
+
+export const updateUserProfile = async (uid: string, profileData: Partial<UserProfile>): Promise<void> => {
+    const user = auth.currentUser;
+    if (user) {
+        if (profileData.displayName !== undefined && profileData.displayName !== user.displayName) {
+            await user.updateProfile({ displayName: profileData.displayName });
+        }
+    } else {
+        throw new Error("Пользователь не аутентифицирован для обновления профиля");
+    }
+
+    const userDocRef = usersCollectionRef.doc(uid);
+    await userDocRef.update(profileData);
+};
+
+// --- Role Management Functions ---
+
+export const getRoles = async (): Promise<Role[]> => {
+    const snapshot = await rolesCollectionRef.get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
+};
+
+export const createRole = async (roleData: Omit<Role, 'id'>): Promise<Role> => {
+    const docRef = await rolesCollectionRef.add(roleData);
+    return { id: docRef.id, ...roleData };
+};
+
+export const updateRole = async (role: Role): Promise<void> => {
+    const { id, ...roleData } = role;
+    await rolesCollectionRef.doc(id).update(roleData);
+};
+
+export const deleteRole = async (roleId: string): Promise<void> => {
+    await rolesCollectionRef.doc(roleId).delete();
+};
+
+export const seedInitialRoles = async (): Promise<void> => {
+    const batch = db.batch();
+    INITIAL_ROLES.forEach(role => {
+        const docRef = rolesCollectionRef.doc(); // Automatically generate unique ID
+        batch.set(docRef, role);
+    });
+    await batch.commit();
+};
+
+// --- User and Role Assignment Functions ---
+
+export const getUsersWithRoles = async (): Promise<UserWithRoles[]> => {
+    const [usersSnapshot, rolesSnapshot] = await Promise.all([
+        usersCollectionRef.get(),
+        rolesCollectionRef.get()
+    ]);
+
+    const roles = rolesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
+    const rolesMap = new Map(roles.map(role => [role.id, role]));
+
+    const users = usersSnapshot.docs.map(doc => {
+        const userProfile = doc.data() as UserProfile;
+        const assignedRoles = (userProfile.roleIds || [])
+            .map(roleId => rolesMap.get(roleId))
+            .filter((role): role is Role => role !== undefined);
+        
+        return {
+            ...userProfile,
+            uid: doc.id,
+            roles: assignedRoles
+        };
+    });
+
+    return users;
+};
+
+export const updateUserRoles = async (uid: string, roleIds: string[]): Promise<void> => {
+    await usersCollectionRef.doc(uid).update({ roleIds });
 };
