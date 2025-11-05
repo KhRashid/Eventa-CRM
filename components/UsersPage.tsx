@@ -4,13 +4,19 @@ import { getUsersWithRoles, getRoles, updateUserRoles } from '../services/fireba
 import { EditIcon } from '../icons';
 import AssignRolesModal from './AssignRolesModal';
 
-const UsersPage: React.FC = () => {
+interface UsersPageProps {
+    permissions: Set<string>;
+}
+
+const UsersPage: React.FC<UsersPageProps> = ({ permissions }) => {
     const [users, setUsers] = useState<UserWithRoles[]>([]);
     const [allRoles, setAllRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
+    
+    const canAssignRoles = permissions.has('users:assign-roles');
 
     const loadData = useCallback(async () => {
         try {
@@ -31,8 +37,13 @@ const UsersPage: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        if (permissions.has('users:read')) {
+            loadData();
+        } else {
+            setError('У вас нет прав для просмотра этого раздела.');
+            setLoading(false);
+        }
+    }, [loadData, permissions]);
 
     const handleEditRoles = (user: UserWithRoles) => {
         setSelectedUser(user);
@@ -101,9 +112,11 @@ const UsersPage: React.FC = () => {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button onClick={() => handleEditRoles(user)} className="text-blue-400 hover:text-blue-300">
-                                           <span className="flex items-center"><EditIcon /> <span className="ml-1">Изменить роли</span></span>
-                                        </button>
+                                        {canAssignRoles && (
+                                            <button onClick={() => handleEditRoles(user)} className="text-blue-400 hover:text-blue-300">
+                                               <span className="flex items-center"><EditIcon /> <span className="ml-1">Изменить роли</span></span>
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

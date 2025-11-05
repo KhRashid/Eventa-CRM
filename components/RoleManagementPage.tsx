@@ -4,12 +4,20 @@ import { getRoles, createRole, updateRole, deleteRole, seedInitialRoles } from '
 import { AddIcon, EditIcon, TrashIcon } from '../icons';
 import RoleFormModal from './RoleFormModal';
 
-const RoleManagementPage: React.FC = () => {
+interface RoleManagementPageProps {
+    permissions: Set<string>;
+}
+
+const RoleManagementPage: React.FC<RoleManagementPageProps> = ({ permissions }) => {
     const [roles, setRoles] = useState<Role[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentRole, setCurrentRole] = useState<Role | null>(null);
+
+    const canCreate = permissions.has('roles:create');
+    const canUpdate = permissions.has('roles:update');
+    const canDelete = permissions.has('roles:delete');
 
     const loadRoles = useCallback(async () => {
         try {
@@ -17,8 +25,9 @@ const RoleManagementPage: React.FC = () => {
             setError(null);
             let fetchedRoles = await getRoles();
             if (fetchedRoles.length === 0) {
-                await seedInitialRoles();
-                fetchedRoles = await getRoles();
+                // Seeding should ideally be a backend process or done once
+                // For this CRM, we assume an admin will set up roles.
+                // If no roles, an admin can create them.
             }
             setRoles(fetchedRoles);
         } catch (err) {
@@ -30,8 +39,13 @@ const RoleManagementPage: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        loadRoles();
-    }, [loadRoles]);
+        if (permissions.has('roles:read')) {
+            loadRoles();
+        } else {
+            setError('У вас нет прав для просмотра этого раздела.');
+            setLoading(false);
+        }
+    }, [loadRoles, permissions]);
 
     const handleCreate = () => {
         setCurrentRole(null);
@@ -76,13 +90,15 @@ const RoleManagementPage: React.FC = () => {
         <div className="w-full bg-gray-800 rounded-lg p-6 h-full flex flex-col text-white">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-blue-400">Управление ролями</h1>
-                <button
-                    onClick={handleCreate}
-                    className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors"
-                >
-                    <AddIcon />
-                    <span>Создать роль</span>
-                </button>
+                {canCreate && (
+                    <button
+                        onClick={handleCreate}
+                        className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors"
+                    >
+                        <AddIcon />
+                        <span>Создать роль</span>
+                    </button>
+                )}
             </div>
 
             {loading && <p className="text-center text-gray-400">Загрузка ролей...</p>}
@@ -104,12 +120,16 @@ const RoleManagementPage: React.FC = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{role.name}</td>
                                     <td className="px-6 py-4 whitespace-normal text-sm text-gray-300 max-w-md">{role.description}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button onClick={() => handleEdit(role)} className="text-blue-400 hover:text-blue-300 mr-4">
-                                            <EditIcon />
-                                        </button>
-                                        <button onClick={() => handleDelete(role.id)} className="text-red-500 hover:text-red-400">
-                                            <TrashIcon />
-                                        </button>
+                                        {canUpdate && (
+                                            <button onClick={() => handleEdit(role)} className="text-blue-400 hover:text-blue-300 mr-4">
+                                                <EditIcon />
+                                            </button>
+                                        )}
+                                        {canDelete && (
+                                            <button onClick={() => handleDelete(role.id)} className="text-red-500 hover:text-red-400">
+                                                <TrashIcon />
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

@@ -8,6 +8,7 @@ interface DetailsPanelProps {
   onVenueDelete: (venueId: string) => void;
   isEditing: boolean;
   setIsEditing: (isEditing: boolean) => void;
+  permissions: Set<string>;
 }
 
 const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -49,7 +50,7 @@ const EditCheckbox: React.FC<{ label: string, checked: boolean, name: string, on
 );
 
 
-const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVenueDelete, isEditing, setIsEditing }) => {
+const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVenueDelete, isEditing, setIsEditing, permissions }) => {
   const [editedVenue, setEditedVenue] = useState<Venue | null>(venue);
 
   useEffect(() => {
@@ -125,8 +126,8 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
                     </>
                 ) : (
                     <>
-                        <button onClick={handleEditToggle} className="p-2 hover:bg-gray-700 rounded-full"><EditIcon /></button>
-                        <button onClick={handleDelete} className="p-2 hover:bg-gray-700 rounded-full text-red-500 hover:text-red-400"><TrashIcon /></button>
+                        {permissions.has('restaurants:update') && <button onClick={handleEditToggle} className="p-2 hover:bg-gray-700 rounded-full"><EditIcon /></button>}
+                        {permissions.has('restaurants:delete') && <button onClick={handleDelete} className="p-2 hover:bg-gray-700 rounded-full text-red-500 hover:text-red-400"><TrashIcon /></button>}
                     </>
                 )}
              </div>

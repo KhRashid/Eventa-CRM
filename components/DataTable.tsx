@@ -9,11 +9,12 @@ interface DataTableProps {
   onRowSelect: (venue: Venue) => void;
   selectedVenueId: string | null;
   onVenueCreate: () => void;
+  permissions: Set<string>;
 }
 
 type SortableKeys = keyof Pick<Venue, 'id' | 'name' | 'created_at'>;
 
-const DataTable: React.FC<DataTableProps> = ({ venues, loading, error, onRowSelect, selectedVenueId, onVenueCreate }) => {
+const DataTable: React.FC<DataTableProps> = ({ venues, loading, error, onRowSelect, selectedVenueId, onVenueCreate, permissions }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: SortableKeys; direction: 'ascending' | 'descending' } | null>({ key: 'created_at', direction: 'descending' });
 
@@ -80,13 +81,15 @@ const DataTable: React.FC<DataTableProps> = ({ venues, loading, error, onRowSele
                 </button>
             )}
           </div>
-          <button
-            onClick={onVenueCreate}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors"
-          >
-            <AddIcon />
-            <span>Добавить</span>
-          </button>
+          {permissions.has('restaurants:create') && (
+            <button
+              onClick={onVenueCreate}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors"
+            >
+              <AddIcon />
+              <span>Добавить</span>
+            </button>
+          )}
         </div>
       </div>
 

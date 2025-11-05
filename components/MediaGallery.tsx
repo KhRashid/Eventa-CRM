@@ -6,9 +6,10 @@ import { uploadFileToStorage } from '../services/firebaseService';
 interface MediaGalleryProps {
   venue: Venue | null;
   onVenueUpdate: (venue: Venue) => void;
+  permissions: Set<string>;
 }
 
-const MediaGallery: React.FC<MediaGalleryProps> = ({ venue, onVenueUpdate }) => {
+const MediaGallery: React.FC<MediaGalleryProps> = ({ venue, onVenueUpdate, permissions }) => {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -18,6 +19,8 @@ const MediaGallery: React.FC<MediaGalleryProps> = ({ venue, onVenueUpdate }) => 
 
   const photos = venue?.media?.photos ?? [];
   const videos = venue?.media?.videos ?? [];
+  
+  const canUpdate = permissions.has('restaurants:update');
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, fileType: 'photo' | 'video') => {
     const file = event.target.files?.[0];
@@ -116,27 +119,33 @@ const MediaGallery: React.FC<MediaGalleryProps> = ({ venue, onVenueUpdate }) => 
 
   return (
     <div className="bg-gray-800 rounded-lg shadow overflow-hidden h-full flex flex-col">
-       <input type="file" ref={photoInputRef} onChange={(e) => handleFileSelect(e, 'photo')} accept="image/*" style={{ display: 'none' }} />
-       <input type="file" ref={videoInputRef} onChange={(e) => handleFileSelect(e, 'video')} accept="video/*" style={{ display: 'none' }} />
+       {canUpdate && (
+         <>
+           <input type="file" ref={photoInputRef} onChange={(e) => handleFileSelect(e, 'photo')} accept="image/*" style={{ display: 'none' }} />
+           <input type="file" ref={videoInputRef} onChange={(e) => handleFileSelect(e, 'video')} accept="video/*" style={{ display: 'none' }} />
+         </>
+       )}
 
       <div className="p-4 border-b border-gray-700 flex justify-between items-center">
         <h3 className="text-lg font-bold">Медиа</h3>
-        <div className="flex space-x-2">
-            <button 
-                onClick={() => photoInputRef.current?.click()} 
-                disabled={isUploading}
-                className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-semibold transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
-            >
-                {isUploading ? <span>Загрузка...</span> : <><AddIcon /><span>Фото</span></>}
-            </button>
-            <button 
-                onClick={() => videoInputRef.current?.click()} 
-                disabled={isUploading}
-                className="flex items-center space-x-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-xs font-semibold transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
-            >
-                {isUploading ? <span>Загрузка...</span> : <><AddIcon /><span>Видео</span></>}
-            </button>
-        </div>
+        {canUpdate && (
+            <div className="flex space-x-2">
+                <button 
+                    onClick={() => photoInputRef.current?.click()} 
+                    disabled={isUploading}
+                    className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-semibold transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                >
+                    {isUploading ? <span>Загрузка...</span> : <><AddIcon /><span>Фото</span></>}
+                </button>
+                <button 
+                    onClick={() => videoInputRef.current?.click()} 
+                    disabled={isUploading}
+                    className="flex items-center space-x-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-xs font-semibold transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                >
+                    {isUploading ? <span>Загрузка...</span> : <><AddIcon /><span>Видео</span></>}
+                </button>
+            </div>
+        )}
       </div>
 
       <div className="p-4 overflow-y-auto flex-1">
@@ -156,9 +165,11 @@ const MediaGallery: React.FC<MediaGalleryProps> = ({ venue, onVenueUpdate }) => 
                       onClick={() => openViewer(index)}
                       loading="lazy"
                     />
-                    <button onClick={() => handleDeletePhoto(index)} className="absolute top-1 right-1 bg-black bg-opacity-60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600">
-                        <TrashIcon />
-                    </button>
+                    {canUpdate && (
+                        <button onClick={() => handleDeletePhoto(index)} className="absolute top-1 right-1 bg-black bg-opacity-60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600">
+                            <TrashIcon />
+                        </button>
+                    )}
                 </div>
               ))}
             </div>
@@ -173,9 +184,11 @@ const MediaGallery: React.FC<MediaGalleryProps> = ({ venue, onVenueUpdate }) => 
                             <a href={video} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate pr-2">
                                 Видео {index + 1}
                             </a>
-                            <button onClick={() => handleDeleteVideo(index)} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <TrashIcon/>
-                            </button>
+                            {canUpdate && (
+                                <button onClick={() => handleDeleteVideo(index)} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <TrashIcon/>
+                                </button>
+                            )}
                         </li>
                     ))}
                 </ul>
