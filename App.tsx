@@ -13,8 +13,6 @@ import ProfilePage from './components/ProfilePage';
 import LoginPage from './components/LoginPage';
 import { auth } from './firebaseConfig';
 import firebase from "firebase/compat/app";
-import AiAssistantButton from './components/AiAssistantButton';
-import AiAssistantModal from './components/AiAssistantModal';
 
 
 const App: React.FC = () => {
@@ -29,7 +27,7 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userPermissions, setUserPermissions] = useState<Set<string>>(new Set());
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [allRoles, setAllRoles] = useState<Role[]>([]);
 
 
   useEffect(() => {
@@ -42,6 +40,7 @@ const App: React.FC = () => {
                 setUserProfile(profile);
 
                 const roles = await getRoles();
+                setAllRoles(roles);
                 const assignedRoles = roles.filter(role => profile.roleIds?.includes(role.id));
                 
                 const permissions = new Set<string>();
@@ -193,7 +192,7 @@ const App: React.FC = () => {
       case 'roles':
         return <RoleManagementPage permissions={userPermissions} />;
       case 'profile':
-        return <ProfilePage user={user!} />;
+        return <ProfilePage user={user!} userProfile={userProfile!} allRoles={allRoles} />;
       default:
         return <div className="text-center w-full">Выберите раздел</div>;
     }
@@ -221,12 +220,11 @@ const App: React.FC = () => {
         onNavigate={handleNavigate}
         onLogout={handleLogout}
         permissions={userPermissions}
+        userName={userProfile?.displayName || ''}
       />
       <main className="flex-1 p-6 flex space-x-6 overflow-hidden">
         {renderPage()}
       </main>
-      <AiAssistantButton onClick={() => setIsAiModalOpen(true)} />
-      {isAiModalOpen && <AiAssistantModal venue={selectedVenue} onClose={() => setIsAiModalOpen(false)} />}
     </div>
   );
 };

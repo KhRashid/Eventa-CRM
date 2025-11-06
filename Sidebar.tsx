@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HomeIcon, RestaurantIcon, ArtistIcon, CarIcon, UsersIcon, SettingsIcon, LogoutIcon, MenuIcon, ProfileIcon, RoleManagementIcon, ChevronDownIcon } from './icons';
+import { HomeIcon, RestaurantIcon, ArtistIcon, CarIcon, UsersIcon, SettingsIcon, LogoutIcon, MenuIcon, ProfileIcon, RoleManagementIcon, ChevronDownIcon, ChevronLeftIcon } from './icons';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -8,9 +8,10 @@ interface SidebarProps {
   onNavigate: (page: string) => void;
   onLogout: () => void;
   permissions: Set<string>;
+  userName: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, onNavigate, onLogout, permissions }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, onNavigate, onLogout, permissions, userName }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const menuItems = [
@@ -39,11 +40,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
 
   return (
     <div className={`bg-black h-full text-white flex flex-col transition-all duration-300 ease-in-out ${isOpen ? 'w-64' : 'w-20'}`}>
-      <div className="flex items-center justify-center h-20 border-b border-gray-800">
+      <div className={`flex items-center h-20 border-b border-gray-800 px-4 transition-all duration-300 ${isOpen ? 'justify-between' : 'justify-center'}`}>
+        {isOpen && (
+            <h2 className="text-lg font-bold text-white truncate" title={userName}>
+                {userName}
+            </h2>
+        )}
         <button onClick={toggleSidebar} className="p-2 rounded-lg hover:bg-gray-800 focus:outline-none">
-          <div className={`transition-transform duration-300 ease-in-out ${!isOpen ? 'rotate-90' : ''}`}>
-            <MenuIcon />
-          </div>
+            {isOpen ? <ChevronLeftIcon /> : <MenuIcon />}
         </button>
       </div>
 

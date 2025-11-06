@@ -2,6 +2,7 @@
 import firebase from "firebase/compat/app";
 import "firebase/compat/firestore";
 import "firebase/compat/storage";
+import "firebase/compat/auth";
 import { db, storage, auth } from '../firebaseConfig';
 import { Venue, UserProfile, Role, UserWithRoles } from '../types';
 import { INITIAL_ROLES } from "../constants";
@@ -160,6 +161,36 @@ export const updateUserProfile = async (uid: string, profileData: Partial<UserPr
     const userDocRef = usersCollectionRef.doc(uid);
     await userDocRef.update(profileData);
 };
+
+export const changeUserPassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+        throw new Error("Пользователь не аутентифицирован.");
+    }
+
+    // Re-authenticate user
+    const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+    
+    try {
+        await user.reauthenticateWithCredential(credential);
+    } catch (error: any) {
+        if (error.code === 'auth/wrong-password') {
+            throw new Error('Текущий пароль введен неверно.');
+        }
+        throw new Error('Ошибка повторной аутентификации.');
+    }
+
+    // If re-authentication is successful, update the password
+    try {
+        await user.updatePassword(newPassword);
+    } catch (error: any) {
+         if (error.code === 'auth/weak-password') {
+            throw new Error('Новый пароль слишком слабый. Он должен содержать не менее 6 символов.');
+        }
+        throw new Error('Не удалось обновить пароль.');
+    }
+};
+
 
 // --- Role Management Functions ---
 
