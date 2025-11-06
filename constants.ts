@@ -65,10 +65,3 @@ export const INITIAL_ROLES = [
         ]
     }
 ];
-
-export const INITIAL_LOOKUPS = [
-  { key: 'cuisine', name: 'Кухня', values: [] },
-  { key: 'facilities', name: 'Удобства', values: [] },
-  { key: 'services', name: 'Услуги', values: [] },
-  { key: 'suitable_for', name: 'Подходит для', values: [] },
-];

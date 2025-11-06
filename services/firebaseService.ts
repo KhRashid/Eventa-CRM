@@ -1,11 +1,11 @@
 // fix: Use Firebase v9 compat libraries to support v8 syntax.
-import * as firebase from "firebase/compat/app";
+import firebase from "firebase/compat/app";
 import "firebase/compat/firestore";
 import "firebase/compat/storage";
 import "firebase/compat/auth";
 import { db, storage, auth } from '../firebaseConfig';
 import { Venue, UserProfile, Role, UserWithRoles, Lookup } from '../types';
-import { INITIAL_ROLES, INITIAL_LOOKUPS } from "../constants";
+import { INITIAL_ROLES } from "../constants";
 
 const venuesCollectionRef = db.collection('venues');
 const usersCollectionRef = db.collection('users');
@@ -14,13 +14,13 @@ const lookupsCollectionRef = db.collection('lookups');
 
 
 // Helper to convert Firestore doc to Venue type with backward compatibility
-const docToVenue = (docSnap: firebase.default.firestore.DocumentSnapshot): Venue => {
+const docToVenue = (docSnap: firebase.firestore.DocumentSnapshot): Venue => {
     const data = docSnap.data();
     if (!data) {
         throw new Error(`Document data not found for doc id: ${docSnap.id}`);
     }
 
-    const mapDataToVenue = (data: firebase.default.firestore.DocumentData): Partial<Venue> => {
+    const mapDataToVenue = (data: firebase.firestore.DocumentData): Partial<Venue> => {
         const venueData: any = {
             customFields: data.customFields || {},
         };
@@ -33,8 +33,8 @@ const docToVenue = (docSnap: firebase.default.firestore.DocumentSnapshot): Venue
         });
 
         for (const key in data) {
-            if (data[key] instanceof firebase.default.firestore.Timestamp) {
-                venueData[key] = (data[key] as firebase.default.firestore.Timestamp).toDate().toISOString();
+            if (data[key] instanceof firebase.firestore.Timestamp) {
+                venueData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
             } else if (key !== 'customFields') { // Avoid re-copying
                 venueData[key] = data[key];
             }
@@ -77,7 +77,7 @@ export const updateData = async (venue: Venue): Promise<Venue> => {
   await venueDocRef.update({
       ...venueData,
       customFields,
-      updated_at: firebase.default.firestore.FieldValue.serverTimestamp(),
+      updated_at: firebase.firestore.FieldValue.serverTimestamp(),
   });
   
   const updatedDocSnapshot = await venueDocRef.get();
@@ -91,8 +91,8 @@ export const updateData = async (venue: Venue): Promise<Venue> => {
 export const createData = async (): Promise<Venue> => {
     const newVenueData = {
         name: 'Новый ресторан',
-        created_at: firebase.default.firestore.FieldValue.serverTimestamp(),
-        updated_at: firebase.default.firestore.FieldValue.serverTimestamp(),
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
         address: '',
         base_rental_fee_azn: 0,
         capacity_max: 0,
@@ -142,7 +142,7 @@ export const uploadFileToStorage = async (file: File): Promise<string> => {
 };
 
 // --- User Profile Functions ---
-export const createUserDocument = async (user: firebase.default.User, additionalData: { displayName: string, phone: string }): Promise<void> => {
+export const createUserDocument = async (user: firebase.User, additionalData: { displayName: string, phone: string }): Promise<void> => {
     const userDocRef = usersCollectionRef.doc(user.uid);
     const docSnap = await userDocRef.get();
     if (!docSnap.exists) {
@@ -178,7 +178,7 @@ export const updateUserProfile = async (uid: string, profileData: Partial<UserPr
 export const changeUserPassword = async (currentPassword: string, newPassword: string): Promise<void> => {
     const user = auth.currentUser;
     if (!user || !user.email) throw new Error("Пользователь не аутентифицирован.");
-    const credential = firebase.default.auth.EmailAuthProvider.credential(user.email, currentPassword);
+    const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
     try {
         await user.reauthenticateWithCredential(credential);
     } catch (error: any) {
@@ -237,17 +237,6 @@ export const updateUserRoles = async (uid: string, roleIds: string[]): Promise<v
 export const getLookups = async (): Promise<Lookup[]> => {
     const snapshot = await lookupsCollectionRef.orderBy('name').get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lookup));
-};
-export const seedInitialLookups = async (): Promise<Lookup[]> => {
-    const batch = db.batch();
-    const seededLookups: Lookup[] = [];
-    INITIAL_LOOKUPS.forEach(lookupData => {
-        const docRef = lookupsCollectionRef.doc();
-        batch.set(docRef, lookupData);
-        seededLookups.push({ id: docRef.id, ...lookupData });
-    });
-    await batch.commit();
-    return seededLookups;
 };
 export const updateLookupValues = async (docId: string, values: string[]): Promise<void> => {
     await lookupsCollectionRef.doc(docId).update({ values });

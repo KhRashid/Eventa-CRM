@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lookup } from '../types';
-import { updateLookupValues, createLookup, deleteLookup, updateLookupName, seedInitialLookups } from '../services/firebaseService';
+import { updateLookupValues, createLookup, deleteLookup, updateLookupName } from '../services/firebaseService';
 import { AddIcon, EditIcon, TrashIcon } from '../icons';
 import LookupCategoryModal from './LookupCategoryModal';
 
@@ -18,8 +18,6 @@ const LookupsPage: React.FC<LookupsPageProps> = ({ permissions, lookups, setLook
     const [editingValue, setEditingValue] = useState<{ index: number; text: string } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingLookup, setEditingLookup] = useState<Lookup | null>(null);
-    const [isSeeding, setIsSeeding] = useState(false);
-
 
     const canRead = permissions.has('lookups:read');
     const canUpdateValues = permissions.has('lookups:update');
@@ -30,10 +28,9 @@ const LookupsPage: React.FC<LookupsPageProps> = ({ permissions, lookups, setLook
         if (!selectedLookup && lookups.length > 0) {
             setSelectedLookup(lookups[0]);
         } else if (selectedLookup) {
+            // Update selectedLookup if the list changes
             const updated = lookups.find(l => l.id === selectedLookup.id);
             setSelectedLookup(updated || null);
-        } else if (lookups.length === 0) {
-            setSelectedLookup(null);
         }
     }, [lookups, selectedLookup]);
     
@@ -49,7 +46,7 @@ const LookupsPage: React.FC<LookupsPageProps> = ({ permissions, lookups, setLook
             return;
         }
 
-        const newValues = [...currentValues, trimmedNewValue].sort((a, b) => a.localeCompare(b));
+        const newValues = [...currentValues, trimmedNewValue].sort();
 
         try {
             setLoading(true);
@@ -69,7 +66,7 @@ const LookupsPage: React.FC<LookupsPageProps> = ({ permissions, lookups, setLook
         
         const updatedValues = [...selectedLookup.values];
         updatedValues[editingValue.index] = editingValue.text.trim();
-        const sortedValues = updatedValues.sort((a, b) => a.localeCompare(b));
+        const sortedValues = updatedValues.sort();
         
         try {
             setLoading(true);
@@ -106,11 +103,10 @@ const LookupsPage: React.FC<LookupsPageProps> = ({ permissions, lookups, setLook
         try {
             if (id) { // Editing
                 await updateLookupName(id, lookupData.name);
-                setLookups(prev => prev.map(l => l.id === id ? {...l, name: lookupData.name} : l));
+                setLookups(prev => prev.map(l => l.id === id ? {...l, ...lookupData} : l));
             } else { // Creating
                 const newLookup = await createLookup(lookupData.name, lookupData.key);
-                setLookups(prev => [...prev, newLookup].sort((a, b) => a.name.localeCompare(b.name)));
-                setSelectedLookup(newLookup);
+                setLookups(prev => [...prev, newLookup]);
             }
             setIsModalOpen(false);
             setEditingLookup(null);
@@ -126,30 +122,11 @@ const LookupsPage: React.FC<LookupsPageProps> = ({ permissions, lookups, setLook
                 await deleteLookup(lookup.id);
                 setLookups(prev => prev.filter(l => l.id !== lookup.id));
                 if (selectedLookup?.id === lookup.id) {
-                    setSelectedLookup(lookups.length > 1 ? lookups.find(l => l.id !== lookup.id)! : null);
+                    setSelectedLookup(null);
                 }
             } catch(err) {
                 setError('Не удалось удалить категорию.');
             }
-        }
-    };
-    
-    const handleSeed = async () => {
-        if (!window.confirm("Это создаст стандартный набор категорий (Кухня, Удобства и т.д.), если они еще не существуют. Продолжить?")) return;
-        
-        setIsSeeding(true);
-        setError(null);
-        try {
-            const seededLookups = await seedInitialLookups();
-            // Merge results, preventing duplicates
-            const existingKeys = new Set(lookups.map(l => l.key));
-            const newLookups = seededLookups.filter(sl => !existingKeys.has(sl.key));
-            setLookups(prev => [...prev, ...newLookups].sort((a, b) => a.name.localeCompare(b.name)));
-        } catch (err: any) {
-            console.error(err);
-            setError(err.message || 'Не удалось создать категории. Проверьте права доступа в Firestore.');
-        } finally {
-            setIsSeeding(false);
         }
     };
 
@@ -178,35 +155,15 @@ const LookupsPage: React.FC<LookupsPageProps> = ({ permissions, lookups, setLook
                         >
                             <span>{lookup.name}</span>
                             <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                {canCreateCategory && ( // Assuming create permission allows editing name
-                                    <button onClick={(e) => { e.stopPropagation(); setEditingLookup(lookup); setIsModalOpen(true);}} className="p-1 hover:bg-gray-500 rounded"><EditIcon /></button>
+                                {canUpdateValues && (
+                                     <button onClick={(e) => { e.stopPropagation(); setEditingLookup(lookup); setIsModalOpen(true);}} className="p-1 hover:bg-gray-500 rounded"><EditIcon /></button>
                                 )}
                                 {canDeleteCategory && (
-                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteCategory(lookup); }} className="p-1 hover:bg-red-500 rounded"><TrashIcon /></button>
+                                     <button onClick={(e) => { e.stopPropagation(); handleDeleteCategory(lookup); }} className="p-1 hover:bg-red-500 rounded"><TrashIcon /></button>
                                 )}
                             </div>
                         </div>
                     ))}
-                    
-                    {lookups.length === 0 && canCreateCategory && (
-                         <div className="text-center text-gray-500 p-4 border-2 border-dashed border-gray-700 rounded-lg space-y-4">
-                            <p>Категории не найдены.</p>
-                            <button 
-                                onClick={() => { setEditingLookup(null); setIsModalOpen(true); }}
-                                className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors"
-                            >
-                                <AddIcon />
-                                <span>Создать новую категорию</span>
-                            </button>
-                            <button 
-                                onClick={handleSeed}
-                                disabled={isSeeding}
-                                className="w-full flex items-center justify-center space-x-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-md transition-colors disabled:opacity-50"
-                            >
-                                {isSeeding ? "Создание..." : "Восстановить по умолчанию"}
-                            </button>
-                        </div>
-                    )}
                 </nav>
             </div>
 
@@ -228,7 +185,7 @@ const LookupsPage: React.FC<LookupsPageProps> = ({ permissions, lookups, setLook
                        
                         <div className="flex-1 overflow-y-auto pr-2">
                             <ul className="space-y-2">
-                                {(selectedLookup.values || []).map((value, index) => (
+                                {selectedLookup.values.map((value, index) => (
                                     <li key={index} className="bg-gray-900 p-3 rounded-md flex justify-between items-center group">
                                         {editingValue?.index === index ? (
                                             <input type="text" value={editingValue.text} onChange={(e) => setEditingValue({ ...editingValue, text: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateValue() }} autoFocus onBlur={handleUpdateValue} className="bg-gray-700 px-2 py-1 rounded w-full"/>

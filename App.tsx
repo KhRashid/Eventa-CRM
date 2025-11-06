@@ -13,7 +13,7 @@ import ProfilePage from './components/ProfilePage';
 import LoginPage from './components/LoginPage';
 import LookupsPage from './components/LookupsPage';
 import { auth } from './firebaseConfig';
-import * as firebase from "firebase/compat/app";
+import firebase from "firebase/compat/app";
 
 
 const App: React.FC = () => {
@@ -24,7 +24,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState('restaurants');
-  const [user, setUser] = useState<firebase.default.User | null>(null);
+  const [user, setUser] = useState<firebase.User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userPermissions, setUserPermissions] = useState<Set<string>>(new Set());
@@ -54,13 +54,9 @@ const App: React.FC = () => {
                 });
                 setUserPermissions(permissions);
 
-            } catch (e: any) {
-                console.error("Failed to load user data:", e);
-                if (e.code === 'permission-denied' || e.message.includes('PERMISSION_DENIED')) {
-                   setError("Ошибка прав доступа. Проверьте правила безопасности Firestore.");
-                } else {
-                   setError("Не удалось загрузить данные пользователя.");
-                }
+            } catch (e) {
+                console.error("Failed to load user profile and permissions:", e);
+                setError("Не удалось загрузить права пользователя.");
                 setUserPermissions(new Set());
             }
         } else {

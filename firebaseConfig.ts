@@ -1,5 +1,5 @@
 // fix: Use Firebase v9 compat libraries to support v8 syntax.
-import * as firebase from "firebase/compat/app";
+import firebase from "firebase/compat/app";
 import "firebase/compat/firestore";
 import "firebase/compat/storage";
 import "firebase/compat/auth";
@@ -16,13 +16,11 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-if (!firebase.default.apps.length) {
-  firebase.default.initializeApp(firebaseConfig);
-}
+firebase.initializeApp(firebaseConfig);
 
 // Get a Firestore instance
-const db = firebase.default.firestore();
-const storage = firebase.default.storage();
-const auth = firebase.default.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+const auth = firebase.auth();
 
 export { db, storage, auth };
