@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Venue, Lookup } from '../types';
 import { EditIcon, CloseIcon, TrashIcon } from '../icons';
 import MultiSelectDropdown from './MultiSelectDropdown';
-import { LOOKUP_CONFIG } from '../constants';
 
 interface DetailsPanelProps {
   venue: Venue | null;
@@ -111,18 +110,16 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
     }
   };
 
-  const handleMultiSelectChange = (name: keyof Venue, selectedValues: string[]) => {
+  const handleMultiSelectChange = (lookupKey: string, selectedValues: string[]) => {
       if (!editedVenue) return;
       setEditedVenue({
           ...editedVenue,
-          [name]: selectedValues
+          customFields: {
+            ...editedVenue.customFields,
+            [lookupKey]: selectedValues,
+          }
       });
   };
-
-  const getLookupOptions = (lookupId: string): string[] => {
-      return lookups.find(l => l.id === lookupId)?.values || [];
-  };
-
 
   return (
     <div className="bg-gray-800 rounded-lg p-6 h-full overflow-y-auto">
@@ -182,22 +179,14 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
                         </div>
                     ))}
                 </div>
-                <div className="py-3">
-                    <dt className="text-sm font-medium text-gray-400 mb-2">Кухня</dt>
-                    <div>{venue.cuisine.map(c => <Tag key={c} text={c} />)}</div>
-                </div>
-                <div className="py-3">
-                    <dt className="text-sm font-medium text-gray-400 mb-2">Удобства</dt>
-                    <div>{venue.facilities.map(f => <Tag key={f} text={f} />)}</div>
-                </div>
-                <div className="py-3">
-                    <dt className="text-sm font-medium text-gray-400 mb-2">Услуги</dt>
-                    <div>{venue.services.map(s => <Tag key={s} text={s} />)}</div>
-                </div>
-                <div className="py-3">
-                    <dt className="text-sm font-medium text-gray-400 mb-2">Подходит для</dt>
-                    <div>{venue.suitable_for.map(s => <Tag key={s} text={s} />)}</div>
-                </div>
+                
+                {lookups.map(lookup => (
+                  <div className="py-3" key={lookup.id}>
+                    <dt className="text-sm font-medium text-gray-400 mb-2">{lookup.name}</dt>
+                    <div>{(venue.customFields?.[lookup.key] || []).map(val => <Tag key={val} text={val} />)}</div>
+                  </div>
+                ))}
+                
                 <DetailItem label="Дата создания" value={new Date(venue.created_at).toLocaleString('ru-RU')} />
                 <DetailItem label="Последнее обновление" value={new Date(venue.updated_at).toLocaleString('ru-RU')} />
             </dl>
@@ -231,15 +220,15 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
                         </div>
                     </div>
 
-                    {Object.entries(LOOKUP_CONFIG).map(([key, config]) => (
-                         <div className="py-2 sm:grid sm:grid-cols-3 sm:gap-4" key={key}>
-                             <label className="block text-sm font-medium text-gray-400 sm:pt-2">{config.name}</label>
+                    {lookups.map(lookup => (
+                         <div className="py-2 sm:grid sm:grid-cols-3 sm:gap-4" key={lookup.id}>
+                             <label className="block text-sm font-medium text-gray-400 sm:pt-2">{lookup.name}</label>
                              <div className="mt-1 sm:mt-0 sm:col-span-2">
                                  <MultiSelectDropdown
-                                     options={getLookupOptions(key)}
-                                     selected={editedVenue[key as keyof Venue] as string[]}
-                                     onChange={(selected) => handleMultiSelectChange(key as keyof Venue, selected)}
-                                     placeholder={`Выберите ${config.name.toLowerCase()}...`}
+                                     options={lookup.values}
+                                     selected={editedVenue.customFields?.[lookup.key] || []}
+                                     onChange={(selected) => handleMultiSelectChange(lookup.key, selected)}
+                                     placeholder={`Выберите ${lookup.name.toLowerCase()}...`}
                                  />
                              </div>
                          </div>

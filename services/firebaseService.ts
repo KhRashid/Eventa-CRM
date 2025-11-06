@@ -1,11 +1,11 @@
 // fix: Use Firebase v9 compat libraries to support v8 syntax.
-import firebase from "firebase/compat/app";
+import * as firebase from "firebase/compat/app";
 import "firebase/compat/firestore";
 import "firebase/compat/storage";
 import "firebase/compat/auth";
 import { db, storage, auth } from '../firebaseConfig';
 import { Venue, UserProfile, Role, UserWithRoles, Lookup } from '../types';
-import { INITIAL_ROLES } from "../constants";
+import { INITIAL_ROLES, INITIAL_LOOKUPS } from "../constants";
 
 const venuesCollectionRef = db.collection('venues');
 const usersCollectionRef = db.collection('users');
@@ -13,19 +13,29 @@ const rolesCollectionRef = db.collection('roles');
 const lookupsCollectionRef = db.collection('lookups');
 
 
-// Helper to convert Firestore doc to Venue type
-const docToVenue = (docSnap: firebase.firestore.DocumentSnapshot): Venue => {
+// Helper to convert Firestore doc to Venue type with backward compatibility
+const docToVenue = (docSnap: firebase.default.firestore.DocumentSnapshot): Venue => {
     const data = docSnap.data();
     if (!data) {
         throw new Error(`Document data not found for doc id: ${docSnap.id}`);
     }
 
-    const mapDataToVenue = (data: firebase.firestore.DocumentData): Partial<Venue> => {
-        const venueData: any = {};
+    const mapDataToVenue = (data: firebase.default.firestore.DocumentData): Partial<Venue> => {
+        const venueData: any = {
+            customFields: data.customFields || {},
+        };
+        
+        // Backward compatibility: merge legacy fields into customFields if they exist
+        ['cuisine', 'facilities', 'services', 'suitable_for'].forEach(key => {
+            if (data[key] && !venueData.customFields[key]) {
+                venueData.customFields[key] = data[key];
+            }
+        });
+
         for (const key in data) {
-            if (data[key] instanceof firebase.firestore.Timestamp) {
-                venueData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
-            } else {
+            if (data[key] instanceof firebase.default.firestore.Timestamp) {
+                venueData[key] = (data[key] as firebase.default.firestore.Timestamp).toDate().toISOString();
+            } else if (key !== 'customFields') { // Avoid re-copying
                 venueData[key] = data[key];
             }
         }
@@ -47,15 +57,27 @@ export const fetchData = async (): Promise<Venue[]> => {
 
 export const updateData = async (venue: Venue): Promise<Venue> => {
   const { id, ...venueData } = venue;
-  // Firestore does not allow updating the 'id' field within the document data.
   // @ts-ignore
   delete venueData.id;
   
+  // Consolidate legacy fields into customFields before updating
+  const customFields = venueData.customFields || {};
+  ['cuisine', 'facilities', 'services', 'suitable_for'].forEach(key => {
+    // @ts-ignore
+    if (venueData[key]) {
+        // @ts-ignore
+        customFields[key] = venueData[key];
+        // @ts-ignore
+        delete venueData[key];
+    }
+  });
+
   const venueDocRef = db.collection('venues').doc(id);
 
   await venueDocRef.update({
       ...venueData,
-      updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+      customFields,
+      updated_at: firebase.default.firestore.FieldValue.serverTimestamp(),
   });
   
   const updatedDocSnapshot = await venueDocRef.get();
@@ -69,16 +91,14 @@ export const updateData = async (venue: Venue): Promise<Venue> => {
 export const createData = async (): Promise<Venue> => {
     const newVenueData = {
         name: 'Новый ресторан',
-        created_at: firebase.firestore.FieldValue.serverTimestamp(),
-        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+        created_at: firebase.default.firestore.FieldValue.serverTimestamp(),
+        updated_at: firebase.default.firestore.FieldValue.serverTimestamp(),
         address: '',
         base_rental_fee_azn: 0,
         capacity_max: 0,
         capacity_min: 0,
         contact: { email: '', person: '', phone: '' },
-        cuisine: [],
         district: '',
-        facilities: [],
         location_lat: 0,
         location_lng: 0,
         media: { photos: [], videos: [] },
@@ -90,9 +110,8 @@ export const createData = async (): Promise<Venue> => {
             price_per_person_azn_from: 0,
             price_per_person_azn_to: 0,
         },
-        services: [],
-        suitable_for: [],
         tags: [],
+        customFields: {},
     };
 
     const docRef = await venuesCollectionRef.add(newVenueData);
@@ -100,7 +119,6 @@ export const createData = async (): Promise<Venue> => {
     if (newDocSnapshot.exists) {
       return docToVenue(newDocSnapshot);
     } else {
-        // Fallback for optimistic update if getDoc fails immediately
         return {
             id: docRef.id,
             ...newVenueData,
@@ -124,49 +142,27 @@ export const uploadFileToStorage = async (file: File): Promise<string> => {
 };
 
 // --- User Profile Functions ---
-
-export const createUserDocument = async (user: firebase.User, additionalData: { displayName: string, phone: string }): Promise<void> => {
+export const createUserDocument = async (user: firebase.default.User, additionalData: { displayName: string, phone: string }): Promise<void> => {
     const userDocRef = usersCollectionRef.doc(user.uid);
     const docSnap = await userDocRef.get();
-
     if (!docSnap.exists) {
         const { email, uid } = user;
         const { displayName, phone } = additionalData;
-        const newUserProfile: UserProfile = {
-            uid,
-            email: email || '',
-            displayName,
-            phone,
-            roleIds: [],
-        };
+        const newUserProfile: UserProfile = { uid, email: email || '', displayName, phone, roleIds: [] };
         await userDocRef.set(newUserProfile);
     }
 };
-
 export const getUserProfile = async (uid: string): Promise<UserProfile> => {
     const userDocRef = usersCollectionRef.doc(uid);
     const docSnap = await userDocRef.get();
-
-    if (docSnap.exists) {
-        return docSnap.data() as UserProfile;
-    } else {
-        const user = auth.currentUser;
-        if (!user) throw new Error("Пользователь не аутентифицирован");
-        
-        const defaultDisplayName = user.displayName || user.email?.split('@')[0] || 'Новый пользователь';
-
-        const newUserProfile: UserProfile = {
-            uid: user.uid,
-            email: user.email || '',
-            displayName: defaultDisplayName,
-            phone: '',
-            roleIds: [], // Default to no roles
-        };
-        await userDocRef.set(newUserProfile);
-        return newUserProfile;
-    }
+    if (docSnap.exists) return docSnap.data() as UserProfile;
+    const user = auth.currentUser;
+    if (!user) throw new Error("Пользователь не аутентифицирован");
+    const defaultDisplayName = user.displayName || user.email?.split('@')[0] || 'Новый пользователь';
+    const newUserProfile: UserProfile = { uid: user.uid, email: user.email || '', displayName: defaultDisplayName, phone: '', roleIds: [] };
+    await userDocRef.set(newUserProfile);
+    return newUserProfile;
 };
-
 export const updateUserProfile = async (uid: string, profileData: Partial<UserProfile>): Promise<void> => {
     const user = auth.currentUser;
     if (user) {
@@ -176,121 +172,99 @@ export const updateUserProfile = async (uid: string, profileData: Partial<UserPr
     } else {
         throw new Error("Пользователь не аутентифицирован для обновления профиля");
     }
-
     const userDocRef = usersCollectionRef.doc(uid);
     await userDocRef.update(profileData);
 };
-
 export const changeUserPassword = async (currentPassword: string, newPassword: string): Promise<void> => {
     const user = auth.currentUser;
-    if (!user || !user.email) {
-        throw new Error("Пользователь не аутентифицирован.");
-    }
-
-    // Re-authenticate user
-    const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-    
+    if (!user || !user.email) throw new Error("Пользователь не аутентифицирован.");
+    const credential = firebase.default.auth.EmailAuthProvider.credential(user.email, currentPassword);
     try {
         await user.reauthenticateWithCredential(credential);
     } catch (error: any) {
-        if (error.code === 'auth/wrong-password') {
-            throw new Error('Текущий пароль введен неверно.');
-        }
+        if (error.code === 'auth/wrong-password') throw new Error('Текущий пароль введен неверно.');
         throw new Error('Ошибка повторной аутентификации.');
     }
-
-    // If re-authentication is successful, update the password
     try {
         await user.updatePassword(newPassword);
     } catch (error: any) {
-         if (error.code === 'auth/weak-password') {
-            throw new Error('Новый пароль слишком слабый. Он должен содержать не менее 6 символов.');
-        }
+         if (error.code === 'auth/weak-password') throw new Error('Новый пароль должен содержать не менее 6 символов.');
         throw new Error('Не удалось обновить пароль.');
     }
 };
 
-
 // --- Role Management Functions ---
-
 export const getRoles = async (): Promise<Role[]> => {
     const snapshot = await rolesCollectionRef.get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
 };
-
 export const createRole = async (roleData: Omit<Role, 'id'>): Promise<Role> => {
     const docRef = await rolesCollectionRef.add(roleData);
     return { id: docRef.id, ...roleData };
 };
-
 export const updateRole = async (role: Role): Promise<void> => {
     const { id, ...roleData } = role;
     await rolesCollectionRef.doc(id).update(roleData);
 };
-
 export const deleteRole = async (roleId: string): Promise<void> => {
     await rolesCollectionRef.doc(roleId).delete();
 };
-
 export const seedInitialRoles = async (): Promise<void> => {
     const batch = db.batch();
     INITIAL_ROLES.forEach(role => {
-        const docRef = rolesCollectionRef.doc(); // Automatically generate unique ID
+        const docRef = rolesCollectionRef.doc();
         batch.set(docRef, role);
     });
     await batch.commit();
 };
 
 // --- User and Role Assignment Functions ---
-
 export const getUsersWithRoles = async (): Promise<UserWithRoles[]> => {
-    const [usersSnapshot, rolesSnapshot] = await Promise.all([
-        usersCollectionRef.get(),
-        rolesCollectionRef.get()
-    ]);
-
+    const [usersSnapshot, rolesSnapshot] = await Promise.all([ usersCollectionRef.get(), rolesCollectionRef.get() ]);
     const roles = rolesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
     const rolesMap = new Map(roles.map(role => [role.id, role]));
-
-    const users = usersSnapshot.docs.map(doc => {
+    return usersSnapshot.docs.map(doc => {
         const userProfile = doc.data() as UserProfile;
-        const assignedRoles = (userProfile.roleIds || [])
-            .map(roleId => rolesMap.get(roleId))
-            .filter((role): role is Role => role !== undefined);
-        
-        return {
-            ...userProfile,
-            uid: doc.id,
-            roles: assignedRoles
-        };
+        const assignedRoles = (userProfile.roleIds || []).map(roleId => rolesMap.get(roleId)).filter((role): role is Role => role !== undefined);
+        return { ...userProfile, uid: doc.id, roles: assignedRoles };
     });
-
-    return users;
 };
-
 export const updateUserRoles = async (uid: string, roleIds: string[]): Promise<void> => {
     await usersCollectionRef.doc(uid).update({ roleIds });
 };
 
-
 // --- Lookups (Dictionaries) Functions ---
-
 export const getLookups = async (): Promise<Lookup[]> => {
-    const snapshot = await lookupsCollectionRef.get();
-    return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-    } as Lookup));
+    const snapshot = await lookupsCollectionRef.orderBy('name').get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lookup));
 };
-
-export const updateLookup = async (lookupId: string, values: string[]): Promise<void> => {
-    const lookupDocRef = lookupsCollectionRef.doc(lookupId);
-    const doc = await lookupDocRef.get();
-    
-    // Using an object with a 'values' field is more robust
-    if (doc.exists) {
-         await lookupDocRef.update({ values });
-    } else {
-         await lookupDocRef.set({ values });
+export const seedInitialLookups = async (): Promise<Lookup[]> => {
+    const batch = db.batch();
+    const seededLookups: Lookup[] = [];
+    INITIAL_LOOKUPS.forEach(lookupData => {
+        const docRef = lookupsCollectionRef.doc();
+        batch.set(docRef, lookupData);
+        seededLookups.push({ id: docRef.id, ...lookupData });
+    });
+    await batch.commit();
+    return seededLookups;
+};
+export const updateLookupValues = async (docId: string, values: string[]): Promise<void> => {
+    await lookupsCollectionRef.doc(docId).update({ values });
+};
+export const createLookup = async (name: string, key: string): Promise<Lookup> => {
+    const querySnapshot = await lookupsCollectionRef.where('key', '==', key).get();
+    if (!querySnapshot.empty) {
+        throw new Error(`Категория с техническим ID "${key}" уже существует.`);
     }
+    const newLookupData = { name, key, values: [] };
+    const docRef = await lookupsCollectionRef.add(newLookupData);
+    return { id: docRef.id, ...newLookupData };
+};
+export const updateLookupName = async (docId: string, name: string): Promise<void> => {
+    await lookupsCollectionRef.doc(docId).update({ name });
+};
+export const deleteLookup = async (docId: string): Promise<void> => {
+    // Note: This does not remove the data from venues, only the lookup definition.
+    await lookupsCollectionRef.doc(docId).delete();
 };

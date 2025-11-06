@@ -32,7 +32,9 @@ export const ALL_PERMISSIONS = {
   ],
   lookups: [
     { id: 'lookups:read', label: 'Просмотр справочников' },
-    { id: 'lookups:update', label: 'Редактирование справочников' },
+    { id: 'lookups:update', label: 'Редактирование значений' },
+    { id: 'lookups:create', label: 'Создание категорий' },
+    { id: 'lookups:delete', label: 'Удаление категорий' },
   ],
 };
 
@@ -64,9 +66,9 @@ export const INITIAL_ROLES = [
     }
 ];
 
-export const LOOKUP_CONFIG: { [key: string]: { name: string } } = {
-  cuisine: { name: 'Кухня' },
-  facilities: { name: 'Удобства' },
-  services: { name: 'Услуги' },
-  suitable_for: { name: 'Подходит для' },
-};
+export const INITIAL_LOOKUPS = [
+  { key: 'cuisine', name: 'Кухня', values: [] },
+  { key: 'facilities', name: 'Удобства', values: [] },
+  { key: 'services', name: 'Услуги', values: [] },
+  { key: 'suitable_for', name: 'Подходит для', values: [] },
+];

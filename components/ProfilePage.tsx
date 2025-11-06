@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { User } from 'firebase/compat/app';
+import * as firebase from 'firebase/compat/app';
 import { UserProfile, Role } from '../types';
 import { updateUserProfile, changeUserPassword } from '../services/firebaseService';
 
 interface ProfilePageProps {
-  user: User;
+  user: firebase.default.User;
   userProfile: UserProfile;
   allRoles: Role[];
 }

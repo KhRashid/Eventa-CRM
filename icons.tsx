@@ -125,9 +125,10 @@ export const ChevronRightIcon: React.FC = () => (
     </svg>
 );
 
-// fix: Add GeminiIcon component
+// fix: Add GeminiIcon for the AI assistant feature.
 export const GeminiIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2.25C12 2.25 12.5833 7.58333 15 10C17.4167 12.4167 21.75 12.5833 21.75 12.5833C21.75 12.5833 17.4167 13.1667 15 15.5833C12.5833 18 12 22.3333 12 22.3333C12 22.3333 11.4167 18 9 15.5833C6.58333 13.1667 2.25 12.5833 2.25 12.5833C2.25 12.5833 6.58333 12 9 10C11.4167 7.58333 12 2.25 12 2.25Z" />
+        <path d="M10 3.58696L12 8.58696L17 10.587L12 12.587L10 17.587L8 12.587L3 10.587L8 8.58696L10 3.58696Z" />
+        <path d="M18.5 8.08696L19.25 9.58696L20.75 10.337L19.25 11.087L18.5 12.587L17.75 11.087L16.25 10.337L17.75 9.58696L18.5 8.08696Z" />
     </svg>
 );

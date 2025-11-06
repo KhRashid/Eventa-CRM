@@ -37,17 +37,22 @@ export interface Venue {
   capacity_max: number;
   capacity_min: number;
   contact: Contact;
-  cuisine: string[];
   district: string;
-  facilities: string[];
   location_lat: number;
   location_lng: number;
   media: Media;
   menu: MenuCategory[];
   policies: Policies;
-  services: string[];
-  suitable_for: string[];
   tags: string[];
+
+  // Dynamic fields based on lookups
+  customFields: { [key: string]: string[] };
+  
+  // Legacy fields for backward compatibility
+  cuisine?: string[];
+  facilities?: string[];
+  services?: string[];
+  suitable_for?: string[];
 }
 
 export interface UserProfile {
@@ -70,7 +75,8 @@ export interface UserWithRoles extends UserProfile {
 }
 
 export interface Lookup {
-    id: string; // e.g. 'cuisine'
-    name: string; // e.g. 'Кухня'
+    id: string;      // Firestore document ID
+    key: string;     // Machine-readable key (e.g., 'cuisine', 'event_type')
+    name: string;    // Human-readable name (e.g., 'Кухня', 'Тип мероприятия')
     values: string[];
 }

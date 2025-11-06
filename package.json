@@ -12,8 +12,6 @@
     "react-dom": "^19.2.0",
     "react": "^19.2.0",
     "firebase": "^12.5.0",
-    "@firebase/firestore": "^4.9.2",
-    "@firebase/app": "^0.14.5",
     "@google/genai": "^1.28.0"
   },
   "devDependencies": {
