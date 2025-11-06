@@ -68,3 +68,9 @@ export interface Role {
 export interface UserWithRoles extends UserProfile {
     roles: Role[];
 }
+
+export interface Lookup {
+    id: string; // e.g. 'cuisine'
+    name: string; // e.g. 'Кухня'
+    values: string[];
+}

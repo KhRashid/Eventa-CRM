@@ -24,6 +24,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
   const settingsSubMenuItems = [
       { icon: <RoleManagementIcon />, name: 'Role Management', id: 'roles', permission: 'roles:read' },
       { icon: <UsersIcon />, name: 'Users', id: 'users', permission: 'users:read' },
+      // TODO: Replace with a proper icon
+      { icon: <SettingsIcon />, name: 'Lookups', id: 'lookups', permission: 'lookups:read' },
   ]
 
   const bottomItems = [
@@ -35,8 +37,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
       onNavigate(pageId);
   };
   
-  const isSettingsActive = currentPage === 'users' || currentPage === 'roles';
-  const canViewSettings = permissions.has('users:read') || permissions.has('roles:read');
+  const isSettingsActive = currentPage === 'users' || currentPage === 'roles' || currentPage === 'lookups';
+  const canViewSettings = permissions.has('users:read') || permissions.has('roles:read') || permissions.has('lookups:read');
 
   return (
     <div className={`bg-black h-full text-white flex flex-col transition-all duration-300 ease-in-out ${isOpen ? 'w-64' : 'w-20'}`}>

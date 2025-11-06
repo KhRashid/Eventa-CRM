@@ -3,14 +3,15 @@ import Sidebar from './Sidebar';
 import DataTable from './components/DataTable';
 import DetailsPanel from './components/DetailsPanel';
 import MediaGallery from './components/MediaGallery';
-import { Venue, UserProfile, Role } from './types';
-import { fetchData, updateData, createData, deleteData, getUserProfile, getRoles } from './services/firebaseService';
+import { Venue, UserProfile, Role, Lookup } from './types';
+import { fetchData, updateData, createData, deleteData, getUserProfile, getRoles, getLookups } from './services/firebaseService';
 import ArtistsPage from './components/ArtistsPage';
 import CarsPage from './components/CarsPage';
 import UsersPage from './components/UsersPage';
 import RoleManagementPage from './components/RoleManagementPage';
 import ProfilePage from './components/ProfilePage';
 import LoginPage from './components/LoginPage';
+import LookupsPage from './components/LookupsPage';
 import { auth } from './firebaseConfig';
 import firebase from "firebase/compat/app";
 
@@ -28,6 +29,7 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userPermissions, setUserPermissions] = useState<Set<string>>(new Set());
   const [allRoles, setAllRoles] = useState<Role[]>([]);
+  const [lookups, setLookups] = useState<Lookup[]>([]);
 
 
   useEffect(() => {
@@ -35,12 +37,15 @@ const App: React.FC = () => {
         if (user) {
             setUser(user);
             try {
-                // This call ensures a user document is created in Firestore if it doesn't exist.
                 const profile = await getUserProfile(user.uid);
                 setUserProfile(profile);
 
                 const roles = await getRoles();
                 setAllRoles(roles);
+
+                const lookupsData = await getLookups();
+                setLookups(lookupsData);
+
                 const assignedRoles = roles.filter(role => profile.roleIds?.includes(role.id));
                 
                 const permissions = new Set<string>();
@@ -179,6 +184,7 @@ const App: React.FC = () => {
                   isEditing={isEditing}
                   setIsEditing={setIsEditing}
                   permissions={userPermissions}
+                  lookups={lookups}
                 />
             </div>
           </>
@@ -191,6 +197,8 @@ const App: React.FC = () => {
         return <UsersPage permissions={userPermissions} />;
       case 'roles':
         return <RoleManagementPage permissions={userPermissions} />;
+      case 'lookups':
+        return <LookupsPage permissions={userPermissions} lookups={lookups} setLookups={setLookups} />;
       case 'profile':
         return <ProfilePage user={user!} userProfile={userProfile!} allRoles={allRoles} />;
       default:

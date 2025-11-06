@@ -4,12 +4,13 @@ import "firebase/compat/firestore";
 import "firebase/compat/storage";
 import "firebase/compat/auth";
 import { db, storage, auth } from '../firebaseConfig';
-import { Venue, UserProfile, Role, UserWithRoles } from '../types';
+import { Venue, UserProfile, Role, UserWithRoles, Lookup } from '../types';
 import { INITIAL_ROLES } from "../constants";
 
 const venuesCollectionRef = db.collection('venues');
 const usersCollectionRef = db.collection('users');
 const rolesCollectionRef = db.collection('roles');
+const lookupsCollectionRef = db.collection('lookups');
 
 
 // Helper to convert Firestore doc to Venue type
@@ -269,4 +270,27 @@ export const getUsersWithRoles = async (): Promise<UserWithRoles[]> => {
 
 export const updateUserRoles = async (uid: string, roleIds: string[]): Promise<void> => {
     await usersCollectionRef.doc(uid).update({ roleIds });
+};
+
+
+// --- Lookups (Dictionaries) Functions ---
+
+export const getLookups = async (): Promise<Lookup[]> => {
+    const snapshot = await lookupsCollectionRef.get();
+    return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    } as Lookup));
+};
+
+export const updateLookup = async (lookupId: string, values: string[]): Promise<void> => {
+    const lookupDocRef = lookupsCollectionRef.doc(lookupId);
+    const doc = await lookupDocRef.get();
+    
+    // Using an object with a 'values' field is more robust
+    if (doc.exists) {
+         await lookupDocRef.update({ values });
+    } else {
+         await lookupDocRef.set({ values });
+    }
 };

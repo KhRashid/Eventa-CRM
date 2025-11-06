@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Venue } from '../types';
+import { Venue, Lookup } from '../types';
 import { EditIcon, CloseIcon, TrashIcon } from '../icons';
+import MultiSelectDropdown from './MultiSelectDropdown';
+import { LOOKUP_CONFIG } from '../constants';
 
 interface DetailsPanelProps {
   venue: Venue | null;
@@ -9,6 +11,7 @@ interface DetailsPanelProps {
   isEditing: boolean;
   setIsEditing: (isEditing: boolean) => void;
   permissions: Set<string>;
+  lookups: Lookup[];
 }
 
 const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -50,7 +53,7 @@ const EditCheckbox: React.FC<{ label: string, checked: boolean, name: string, on
 );
 
 
-const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVenueDelete, isEditing, setIsEditing, permissions }) => {
+const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVenueDelete, isEditing, setIsEditing, permissions, lookups }) => {
   const [editedVenue, setEditedVenue] = useState<Venue | null>(venue);
 
   useEffect(() => {
@@ -82,7 +85,6 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
     onVenueDelete(venue.id);
   }
 
-  // FIX: Improved type safety by removing @ts-ignore and ensuring property access is type-checked.
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!editedVenue) return;
     const { name, value, type, checked } = e.target;
@@ -100,17 +102,25 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
                 }
             });
         }
-    } else { // Top-level or array
+    } else { // Top-level
         const topLevelKey = name as keyof Venue;
-        if (['cuisine', 'facilities', 'services', 'suitable_for', 'tags'].includes(name)) {
-             setEditedVenue({ ...editedVenue, [topLevelKey]: value.split(',').map(s => s.trim()) });
-        } else {
-             setEditedVenue({
-                ...editedVenue,
-                [topLevelKey]: type === 'checkbox' ? checked : (type === 'number' ? parseFloat(value) || 0 : value)
-            });
-        }
+        setEditedVenue({
+            ...editedVenue,
+            [topLevelKey]: type === 'checkbox' ? checked : (type === 'number' ? parseFloat(value) || 0 : value)
+        });
     }
+  };
+
+  const handleMultiSelectChange = (name: keyof Venue, selectedValues: string[]) => {
+      if (!editedVenue) return;
+      setEditedVenue({
+          ...editedVenue,
+          [name]: selectedValues
+      });
+  };
+
+  const getLookupOptions = (lookupId: string): string[] => {
+      return lookups.find(l => l.id === lookupId)?.values || [];
   };
 
 
@@ -221,10 +231,19 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
                         </div>
                     </div>
 
-                    <EditInput label="Кухня (через запятую)" name="cuisine" value={editedVenue.cuisine.join(', ')} onChange={handleChange} />
-                    <EditInput label="Удобства (через запятую)" name="facilities" value={editedVenue.facilities.join(', ')} onChange={handleChange} />
-                    <EditInput label="Услуги (через запятую)" name="services" value={editedVenue.services.join(', ')} onChange={handleChange} />
-                    <EditInput label="Подходит для (через запятую)" name="suitable_for" value={editedVenue.suitable_for.join(', ')} onChange={handleChange} />
+                    {Object.entries(LOOKUP_CONFIG).map(([key, config]) => (
+                         <div className="py-2 sm:grid sm:grid-cols-3 sm:gap-4" key={key}>
+                             <label className="block text-sm font-medium text-gray-400 sm:pt-2">{config.name}</label>
+                             <div className="mt-1 sm:mt-0 sm:col-span-2">
+                                 <MultiSelectDropdown
+                                     options={getLookupOptions(key)}
+                                     selected={editedVenue[key as keyof Venue] as string[]}
+                                     onChange={(selected) => handleMultiSelectChange(key as keyof Venue, selected)}
+                                     placeholder={`Выберите ${config.name.toLowerCase()}...`}
+                                 />
+                             </div>
+                         </div>
+                    ))}
                  </>
                )}
             </div>

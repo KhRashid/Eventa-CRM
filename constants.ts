@@ -30,6 +30,10 @@ export const ALL_PERMISSIONS = {
     { id: 'roles:update', label: 'Редактирование ролей' },
     { id: 'roles:delete', label: 'Удаление ролей' },
   ],
+  lookups: [
+    { id: 'lookups:read', label: 'Просмотр справочников' },
+    { id: 'lookups:update', label: 'Редактирование справочников' },
+  ],
 };
 
 const allPermissionIds = Object.values(ALL_PERMISSIONS).flat().map(p => p.id);
@@ -59,3 +63,10 @@ export const INITIAL_ROLES = [
         ]
     }
 ];
+
+export const LOOKUP_CONFIG: { [key: string]: { name: string } } = {
+  cuisine: { name: 'Кухня' },
+  facilities: { name: 'Удобства' },
+  services: { name: 'Услуги' },
+  suitable_for: { name: 'Подходит для' },
+};

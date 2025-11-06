@@ -53,13 +53,6 @@ export const LogoutIcon: React.FC = () => (
     </svg>
 );
 
-// fix: Add missing GeminiIcon component.
-export const GeminiIcon: React.FC = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M9.52246 11.2113L12 5.25L14.4775 11.2113L21 13.5L14.4775 15.7887L12 21.75L9.52246 15.7887L3 13.5L9.52246 11.2113Z" />
-    </svg>
-);
-
 export const SearchIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -129,5 +122,12 @@ export const ChevronLeftIcon: React.FC = () => (
 export const ChevronRightIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+);
+
+// fix: Add GeminiIcon component
+export const GeminiIcon: React.FC = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2.25C12 2.25 12.5833 7.58333 15 10C17.4167 12.4167 21.75 12.5833 21.75 12.5833C21.75 12.5833 17.4167 13.1667 15 15.5833C12.5833 18 12 22.3333 12 22.3333C12 22.3333 11.4167 18 9 15.5833C6.58333 13.1667 2.25 12.5833 2.25 12.5833C2.25 12.5833 6.58333 12 9 10C11.4167 7.58333 12 2.25 12 2.25Z" />
     </svg>
 );
