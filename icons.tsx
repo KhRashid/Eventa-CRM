@@ -53,6 +53,13 @@ export const LogoutIcon: React.FC = () => (
     </svg>
 );
 
+// fix: Add missing GeminiIcon component.
+export const GeminiIcon: React.FC = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M9.52246 11.2113L12 5.25L14.4775 11.2113L21 13.5L14.4775 15.7887L12 21.75L9.52246 15.7887L3 13.5L9.52246 11.2113Z" />
+    </svg>
+);
+
 export const SearchIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -123,26 +130,4 @@ export const ChevronRightIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
     </svg>
-);
-
-export const GeminiIcon: React.FC = () => (
-  <svg width="24" height="24" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M8.83203 14.82L14.828 8.82803L22.952 16.952L16.952 22.952L8.83203 14.82Z" fill="url(#paint0_linear_13_110)" />
-    <path d="M8.83203 33.168L14.828 39.172L31.112 22.888L25.112 16.888L8.83203 33.168Z" fill="url(#paint1_linear_13_110)" />
-    <path d="M30.408 6H39.168V14.76L33.168 20.76L24.408 12L30.408 6Z" fill="url(#paint2_linear_13_110)" />
-    <defs>
-      <linearGradient id="paint0_linear_13_110" x1="15.89" y1="8.82803" x2="15.89" y2="22.952" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#94DDFF" />
-        <stop offset="1" stopColor="#F8FBFF" />
-      </linearGradient>
-      <linearGradient id="paint1_linear_13_110" x1="19.972" y1="16.888" x2="19.972" y2="39.172" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#5B9DFF" />
-        <stop offset="1" stopColor="#C4DFFF" />
-      </linearGradient>
-      <linearGradient id="paint2_linear_13_110" x1="31.788" y1="6" x2="31.788" y2="20.76" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#C3E4FF" />
-        <stop offset="1" stopColor="#F8FBFF" />
-      </linearGradient>
-    </defs>
-  </svg>
 );

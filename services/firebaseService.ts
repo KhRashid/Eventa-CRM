@@ -124,6 +124,24 @@ export const uploadFileToStorage = async (file: File): Promise<string> => {
 
 // --- User Profile Functions ---
 
+export const createUserDocument = async (user: firebase.User, additionalData: { displayName: string, phone: string }): Promise<void> => {
+    const userDocRef = usersCollectionRef.doc(user.uid);
+    const docSnap = await userDocRef.get();
+
+    if (!docSnap.exists) {
+        const { email, uid } = user;
+        const { displayName, phone } = additionalData;
+        const newUserProfile: UserProfile = {
+            uid,
+            email: email || '',
+            displayName,
+            phone,
+            roleIds: [],
+        };
+        await userDocRef.set(newUserProfile);
+    }
+};
+
 export const getUserProfile = async (uid: string): Promise<UserProfile> => {
     const userDocRef = usersCollectionRef.doc(uid);
     const docSnap = await userDocRef.get();
