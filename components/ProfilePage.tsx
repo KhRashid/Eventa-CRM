@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { User } from 'firebase/compat/app';
+// FIX: The User type is not a named export from 'firebase/compat/app'.
+// Import the default firebase object and use firebase.User, consistent with other files.
+import firebase from 'firebase/compat/app';
 import { UserProfile, Role } from '../types';
 import { updateUserProfile, changeUserPassword } from '../services/firebaseService';
 
 interface ProfilePageProps {
-  user: User;
+  user: firebase.User;
   userProfile: UserProfile;
   allRoles: Role[];
 }

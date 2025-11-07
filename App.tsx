@@ -3,8 +3,9 @@ import Sidebar from './Sidebar';
 import DataTable from './components/DataTable';
 import DetailsPanel from './components/DetailsPanel';
 import MediaGallery from './components/MediaGallery';
-import { Venue, UserProfile, Role, Lookup } from './types';
-import { fetchData, updateData, createData, deleteData, getUserProfile, getRoles, getLookups } from './services/firebaseService';
+import { Venue, UserProfile, Role, Lookup, MenuItem, MenuPackage } from './types';
+// FIX: import createData to handle new venue creation.
+import { fetchData, getUserProfile, getRoles, getLookups, getMenuItems, getMenuPackages, createData } from './services/firebaseService';
 import ArtistsPage from './components/ArtistsPage';
 import CarsPage from './components/CarsPage';
 import UsersPage from './components/UsersPage';
@@ -12,6 +13,7 @@ import RoleManagementPage from './components/RoleManagementPage';
 import ProfilePage from './components/ProfilePage';
 import LoginPage from './components/LoginPage';
 import LookupsPage from './components/LookupsPage';
+import MenuBuilderPage from './components/MenuBuilderPage';
 import { auth } from './firebaseConfig';
 import firebase from "firebase/compat/app";
 
@@ -30,6 +32,8 @@ const App: React.FC = () => {
   const [userPermissions, setUserPermissions] = useState<Set<string>>(new Set());
   const [allRoles, setAllRoles] = useState<Role[]>([]);
   const [lookups, setLookups] = useState<Lookup[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuPackages, setMenuPackages] = useState<MenuPackage[]>([]);
 
 
   useEffect(() => {
@@ -40,11 +44,17 @@ const App: React.FC = () => {
                 const profile = await getUserProfile(user.uid);
                 setUserProfile(profile);
 
-                const roles = await getRoles();
-                setAllRoles(roles);
+                const [roles, lookupsData, items, packages] = await Promise.all([
+                  getRoles(),
+                  getLookups(),
+                  getMenuItems(),
+                  getMenuPackages()
+                ]);
 
-                const lookupsData = await getLookups();
+                setAllRoles(roles);
                 setLookups(lookupsData);
+                setMenuItems(items);
+                setMenuPackages(packages);
 
                 const assignedRoles = roles.filter(role => profile.roleIds?.includes(role.id));
                 
@@ -55,8 +65,8 @@ const App: React.FC = () => {
                 setUserPermissions(permissions);
 
             } catch (e) {
-                console.error("Failed to load user profile and permissions:", e);
-                setError("Не удалось загрузить права пользователя.");
+                console.error("Failed to load user data:", e);
+                setError("Не удалось загрузить данные пользователя.");
                 setUserPermissions(new Set());
             }
         } else {
@@ -108,43 +118,35 @@ const App: React.FC = () => {
     setSelectedVenue(venue);
     setIsEditing(false); // Exit edit mode when selecting a different row
   };
-
-  const handleVenueUpdate = async (updatedVenue: Venue) => {
-    try {
-      const result = await updateData(updatedVenue);
-      const updatedVenues = venues.map(v => v.id === result.id ? result : v);
+  
+  const handleVenueUpdate = (updatedVenue: Venue) => {
+      const updatedVenues = venues.map(v => v.id === updatedVenue.id ? updatedVenue : v);
       setVenues(updatedVenues);
-      setSelectedVenue(result);
-      setIsEditing(false); // Exit edit mode after saving
-    } catch (error) {
-      console.error("Failed to update venue:", error);
-    }
+      setSelectedVenue(updatedVenue);
+      setIsEditing(false);
   };
-
+  
+  // FIX: Changed function signature to match what DataTable expects `() => void`.
+  // The function now calls the `createData` service to create a new venue in the backend,
+  // then updates the local state to reflect the change.
   const handleVenueCreate = async () => {
     try {
-        const newVenue = await createData();
-        const updatedVenues = [newVenue, ...venues];
-        setVenues(updatedVenues);
-        setSelectedVenue(newVenue);
-        setIsEditing(true); // Enter edit mode for the new venue
-    } catch (error) {
-        console.error("Failed to create venue:", error);
+      const newVenue = await createData();
+      const updatedVenues = [newVenue, ...venues];
+      setVenues(updatedVenues);
+      setSelectedVenue(newVenue);
+      setIsEditing(true);
+    } catch (err) {
+      setError('Не удалось создать новый ресторан.');
+      console.error(err);
     }
   };
 
-  const handleVenueDelete = async (venueId: string) => {
-    if (window.confirm("Вы уверены, что хотите удалить эту запись?")) {
-        try {
-            await deleteData(venueId);
-            const updatedVenues = venues.filter(v => v.id !== venueId);
-            setVenues(updatedVenues);
-            setSelectedVenue(null);
-            setIsEditing(false);
-        } catch (error) {
-            console.error("Failed to delete venue:", error);
-        }
-    }
+  const handleVenueDelete = (venueId: string) => {
+      const updatedVenues = venues.filter(v => v.id !== venueId);
+      setVenues(updatedVenues);
+      setSelectedVenue(null);
+      setIsEditing(false);
   };
 
   const handleLogout = async () => {
@@ -185,6 +187,8 @@ const App: React.FC = () => {
                   setIsEditing={setIsEditing}
                   permissions={userPermissions}
                   lookups={lookups}
+                  allMenuPackages={menuPackages}
+                  allMenuItems={menuItems}
                 />
             </div>
           </>
@@ -193,6 +197,15 @@ const App: React.FC = () => {
         return <ArtistsPage />;
       case 'cars':
         return <CarsPage />;
+      case 'menu-builder':
+        return <MenuBuilderPage 
+                  permissions={userPermissions} 
+                  menuItems={menuItems} 
+                  setMenuItems={setMenuItems} 
+                  menuPackages={menuPackages}
+                  setMenuPackages={setMenuPackages}
+                  lookups={lookups}
+                />;
       case 'users':
         return <UsersPage permissions={userPermissions} />;
       case 'roles':

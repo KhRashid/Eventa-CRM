@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HomeIcon, RestaurantIcon, ArtistIcon, CarIcon, UsersIcon, SettingsIcon, LogoutIcon, MenuIcon, ProfileIcon, RoleManagementIcon, ChevronDownIcon, ChevronLeftIcon } from './icons';
+import { HomeIcon, RestaurantIcon, ArtistIcon, CarIcon, UsersIcon, SettingsIcon, LogoutIcon, MenuIcon, ProfileIcon, RoleManagementIcon, ChevronDownIcon, ChevronLeftIcon, MenuBuilderIcon } from './icons';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,17 +14,19 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, onNavigate, onLogout, permissions, userName }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // FIX: Added permission keys to menu items that require them.
+  // This resolves the TypeScript error and correctly applies permission checks.
   const menuItems = [
     { icon: <HomeIcon />, name: 'Home', id: 'home' },
-    { icon: <RestaurantIcon />, name: 'Restaurants', id: 'restaurants' },
-    { icon: <ArtistIcon />, name: 'Artist', id: 'artists' },
-    { icon: <CarIcon />, name: 'Cars', id: 'cars' },
+    { icon: <RestaurantIcon />, name: 'Restaurants', id: 'restaurants', permission: 'restaurants:read' },
+    { icon: <ArtistIcon />, name: 'Artist', id: 'artists', permission: 'artists:read' },
+    { icon: <CarIcon />, name: 'Cars', id: 'cars', permission: 'cars:read' },
   ];
   
   const settingsSubMenuItems = [
+      { icon: <MenuBuilderIcon />, name: 'Menu Builder', id: 'menu-builder', permission: 'menu-catalog:read' },
       { icon: <RoleManagementIcon />, name: 'Role Management', id: 'roles', permission: 'roles:read' },
       { icon: <UsersIcon />, name: 'Users', id: 'users', permission: 'users:read' },
-      // TODO: Replace with a proper icon
       { icon: <SettingsIcon />, name: 'Lookups', id: 'lookups', permission: 'lookups:read' },
   ]
 
@@ -37,8 +39,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
       onNavigate(pageId);
   };
   
-  const isSettingsActive = currentPage === 'users' || currentPage === 'roles' || currentPage === 'lookups';
-  const canViewSettings = permissions.has('users:read') || permissions.has('roles:read') || permissions.has('lookups:read');
+  // Dynamic checks for settings menu state
+  const isSettingsActive = settingsSubMenuItems.some(item => item.id === currentPage);
+  const canViewSettings = settingsSubMenuItems.some(item => permissions.has(item.permission));
 
   return (
     <div className={`bg-black h-full text-white flex flex-col transition-all duration-300 ease-in-out ${isOpen ? 'w-64' : 'w-20'}`}>
@@ -54,19 +57,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
       </div>
 
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => handleNavigationClick(item.id)}
-            className={`w-full flex items-center p-3 rounded-lg transition-colors duration-200 text-left ${
-                currentPage === item.id ? 'bg-blue-600' : 'hover:bg-gray-800'
-            }`}
-          >
-            <div className="flex-shrink-0 w-6 h-6">{item.icon}</div>
-            <span className={`ml-4 font-semibold transition-opacity duration-300 ${!isOpen && 'opacity-0 hidden'}`}>{item.name}</span>
-          </button>
-        ))}
+        {menuItems.map((item) => {
+          if (item.permission && !permissions.has(item.permission)) {
+            return null;
+          }
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => handleNavigationClick(item.id)}
+              className={`w-full flex items-center p-3 rounded-lg transition-colors duration-200 text-left ${
+                  currentPage === item.id ? 'bg-blue-600' : 'hover:bg-gray-800'
+              }`}
+            >
+              <div className="flex-shrink-0 w-6 h-6">{item.icon}</div>
+              <span className={`ml-4 font-semibold transition-opacity duration-300 ${!isOpen && 'opacity-0 hidden'}`}>{item.name}</span>
+            </button>
+          )
+        })}
         
         {/* Settings Dropdown */}
         {canViewSettings && (

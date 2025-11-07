@@ -4,13 +4,15 @@ import "firebase/compat/firestore";
 import "firebase/compat/storage";
 import "firebase/compat/auth";
 import { db, storage, auth } from '../firebaseConfig';
-import { Venue, UserProfile, Role, UserWithRoles, Lookup } from '../types';
+import { Venue, UserProfile, Role, UserWithRoles, Lookup, MenuItem, MenuPackage } from '../types';
 import { INITIAL_ROLES } from "../constants";
 
 const venuesCollectionRef = db.collection('venues');
 const usersCollectionRef = db.collection('users');
 const rolesCollectionRef = db.collection('roles');
 const lookupsCollectionRef = db.collection('lookups');
+const menuItemsCollectionRef = db.collection('menu_items');
+const menuPackagesCollectionRef = db.collection('menu_packages');
 
 
 // Helper to convert Firestore doc to Venue type with backward compatibility
@@ -56,36 +58,30 @@ export const fetchData = async (): Promise<Venue[]> => {
 };
 
 export const updateData = async (venue: Venue): Promise<Venue> => {
-  const { id, ...venueData } = venue;
-  // @ts-ignore
-  delete venueData.id;
-  
-  // Consolidate legacy fields into customFields before updating
-  const customFields = venueData.customFields || {};
-  ['cuisine', 'facilities', 'services', 'suitable_for'].forEach(key => {
-    // @ts-ignore
-    if (venueData[key]) {
-        // @ts-ignore
-        customFields[key] = venueData[key];
-        // @ts-ignore
-        delete venueData[key];
+    const { id, ...venueData } = venue;
+    const venueDocRef = db.collection('venues').doc(id);
+
+    // Prepare data for update
+    const dataToUpdate: any = {
+        ...venueData,
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    // Remove legacy fields to avoid writing them back
+    delete dataToUpdate.cuisine;
+    delete dataToUpdate.facilities;
+    delete dataToUpdate.services;
+    delete dataToUpdate.suitable_for;
+    delete dataToUpdate.menu;
+
+    await venueDocRef.update(dataToUpdate);
+    
+    const updatedDocSnapshot = await venueDocRef.get();
+    if (updatedDocSnapshot.exists) {
+        return docToVenue(updatedDocSnapshot);
+    } else {
+        throw new Error("Failed to fetch updated document");
     }
-  });
-
-  const venueDocRef = db.collection('venues').doc(id);
-
-  await venueDocRef.update({
-      ...venueData,
-      customFields,
-      updated_at: firebase.firestore.FieldValue.serverTimestamp(),
-  });
-  
-  const updatedDocSnapshot = await venueDocRef.get();
-  if (updatedDocSnapshot.exists) {
-      return docToVenue(updatedDocSnapshot);
-  } else {
-      throw new Error("Failed to fetch updated document");
-  }
 };
 
 export const createData = async (): Promise<Venue> => {
@@ -102,7 +98,6 @@ export const createData = async (): Promise<Venue> => {
         location_lat: 0,
         location_lng: 0,
         media: { photos: [], videos: [] },
-        menu: [],
         policies: {
             alcohol_allowed: false,
             corkage_fee_azn: 0,
@@ -112,6 +107,7 @@ export const createData = async (): Promise<Venue> => {
         },
         tags: [],
         customFields: {},
+        assignedPackageIds: [],
     };
 
     const docRef = await venuesCollectionRef.add(newVenueData);
@@ -119,12 +115,7 @@ export const createData = async (): Promise<Venue> => {
     if (newDocSnapshot.exists) {
       return docToVenue(newDocSnapshot);
     } else {
-        return {
-            id: docRef.id,
-            ...newVenueData,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        } as Venue
+      throw new Error("Could not create new venue");
     }
 };
 
@@ -256,4 +247,46 @@ export const updateLookupName = async (docId: string, name: string): Promise<voi
 export const deleteLookup = async (docId: string): Promise<void> => {
     // Note: This does not remove the data from venues, only the lookup definition.
     await lookupsCollectionRef.doc(docId).delete();
+};
+
+
+// --- Menu Builder Functions ---
+export const getMenuItems = async (): Promise<MenuItem[]> => {
+    const snapshot = await menuItemsCollectionRef.orderBy('category').orderBy('name').get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem));
+};
+export const createMenuItem = async (item: Omit<MenuItem, 'id'>): Promise<MenuItem> => {
+    const docRef = await menuItemsCollectionRef.add(item);
+    return { id: docRef.id, ...item };
+};
+export const updateMenuItem = async (item: MenuItem): Promise<void> => {
+    const { id, ...itemData } = item;
+    await menuItemsCollectionRef.doc(id).update(itemData);
+};
+export const deleteMenuItem = async (itemId: string): Promise<void> => {
+    await menuItemsCollectionRef.doc(itemId).delete();
+    // Also remove this item from any packages that contain it
+    const packagesSnapshot = await menuPackagesCollectionRef.where('itemIds', 'array-contains', itemId).get();
+    const batch = db.batch();
+    packagesSnapshot.forEach(doc => {
+        const packageRef = menuPackagesCollectionRef.doc(doc.id);
+        batch.update(packageRef, { itemIds: firebase.firestore.FieldValue.arrayRemove(itemId) });
+    });
+    await batch.commit();
+};
+
+export const getMenuPackages = async (): Promise<MenuPackage[]> => {
+    const snapshot = await menuPackagesCollectionRef.orderBy('name').get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuPackage));
+};
+export const createMenuPackage = async (pkg: Omit<MenuPackage, 'id'>): Promise<MenuPackage> => {
+    const docRef = await menuPackagesCollectionRef.add(pkg);
+    return { id: docRef.id, ...pkg };
+};
+export const updateMenuPackage = async (pkg: MenuPackage): Promise<void> => {
+    const { id, ...pkgData } = pkg;
+    await menuPackagesCollectionRef.doc(id).update(pkgData);
+};
+export const deleteMenuPackage = async (packageId: string): Promise<void> => {
+    await menuPackagesCollectionRef.doc(packageId).delete();
 };

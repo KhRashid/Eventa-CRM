@@ -4,6 +4,19 @@ export const ALL_PERMISSIONS = {
     { id: 'restaurants:create', label: 'Создание ресторанов' },
     { id: 'restaurants:update', label: 'Редактирование ресторанов' },
     { id: 'restaurants:delete', label: 'Удаление ресторанов' },
+    { id: 'restaurants:assign-packages', label: 'Назначение пакетов меню' },
+  ],
+  'menu-catalog': [
+    { id: 'menu-catalog:read', label: 'Просмотр каталога меню' },
+    { id: 'menu-catalog:create', label: 'Создание блюд в каталоге' },
+    { id: 'menu-catalog:update', label: 'Редактирование блюд' },
+    { id: 'menu-catalog:delete', label: 'Удаление блюд' },
+  ],
+  'menu-packages': [
+    { id: 'menu-packages:read', label: 'Просмотр пакетов меню' },
+    { id: 'menu-packages:create', label: 'Создание пакетов меню' },
+    { id: 'menu-packages:update', label: 'Редактирование пакетов' },
+    { id: 'menu-packages:delete', label: 'Удаление пакетов' },
   ],
   artists: [
     { id: 'artists:read', label: 'Просмотр артистов' },
@@ -53,6 +66,8 @@ export const INITIAL_ROLES = [
             ...ALL_PERMISSIONS.restaurants.map(p => p.id),
             ...ALL_PERMISSIONS.artists.map(p => p.id),
             ...ALL_PERMISSIONS.cars.map(p => p.id),
+            'menu-catalog:read',
+            'menu-packages:read',
         ],
     },
     {
@@ -62,6 +77,8 @@ export const INITIAL_ROLES = [
             'restaurants:read',
             'artists:read',
             'cars:read',
+            'menu-catalog:read',
+            'menu-packages:read',
         ]
     }
 ];

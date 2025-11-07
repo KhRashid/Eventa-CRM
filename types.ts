@@ -9,16 +9,6 @@ export interface Media {
   videos: string[];
 }
 
-export interface MenuItem {
-  name: string;
-  price_azn: number;
-}
-
-export interface MenuCategory {
-  category: string;
-  items: MenuItem[];
-}
-
 export interface Policies {
   alcohol_allowed: boolean;
   corkage_fee_azn: number;
@@ -41,18 +31,17 @@ export interface Venue {
   location_lat: number;
   location_lng: number;
   media: Media;
-  menu: MenuCategory[];
   policies: Policies;
   tags: string[];
-
-  // Dynamic fields based on lookups
   customFields: { [key: string]: string[] };
+  assignedPackageIds?: string[];
   
   // Legacy fields for backward compatibility
   cuisine?: string[];
   facilities?: string[];
   services?: string[];
   suitable_for?: string[];
+  menu?: any[]; // Legacy
 }
 
 export interface UserProfile {
@@ -75,8 +64,24 @@ export interface UserWithRoles extends UserProfile {
 }
 
 export interface Lookup {
-    id: string;      // Firestore document ID
-    key: string;     // Machine-readable key (e.g., 'cuisine', 'event_type')
-    name: string;    // Human-readable name (e.g., 'Кухня', 'Тип мероприятия')
+    id: string;
+    key: string;
+    name: string;
     values: string[];
+}
+
+export interface MenuItem {
+    id: string;
+    name: string;
+    category: string;
+    description: string;
+    portion_size: string;
+    photoUrl: string;
+}
+
+export interface MenuPackage {
+    id: string;
+    name: string;
+    price_azn: number;
+    itemIds: string[];
 }

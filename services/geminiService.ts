@@ -21,10 +21,10 @@ function createVenueContext(venue: Venue): string {
         - Corkage fee: ${venue.policies.corkage_fee_azn} AZN.
         - Outside catering allowed: ${venue.policies.outside_catering_allowed ? 'Yes' : 'No'}.
 
-        Cuisine: ${venue.cuisine.join(', ')}.
-        Facilities: ${venue.facilities.join(', ')}.
-        Services: ${venue.services.join(', ')}.
-        Suitable for: ${venue.suitable_for.join(', ')}.
+        Cuisine: ${(venue.customFields?.cuisine ?? []).join(', ')}.
+        Facilities: ${(venue.customFields?.facilities ?? []).join(', ')}.
+        Services: ${(venue.customFields?.services ?? []).join(', ')}.
+        Suitable for: ${(venue.customFields?.suitable_for ?? []).join(', ')}.
 
         Contact Person: ${venue.contact.person}
         Contact Phone: ${venue.contact.phone}
