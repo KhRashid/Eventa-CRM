@@ -125,7 +125,7 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ permissions, singers, setSing
                 />
               </div>
               <div className="h-2/5">
-                <SingerMediaGallery singer={selectedSinger} permissions={permissions} />
+                <SingerMediaGallery singer={selectedSinger} permissions={permissions} onSingerUpdate={handleSingerUpdate} />
               </div>
             </div>
             <div className="w-1/3">

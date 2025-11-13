@@ -370,6 +370,14 @@ export const deleteSinger = async (singerId: string): Promise<void> => {
   await singersCollectionRef.doc(singerId).delete();
 };
 
+export const uploadSingerFileToStorage = async (file: File, singerId: string): Promise<string> => {
+    const fileName = `${new Date().getTime()}_${file.name}`;
+    const storageRef = storage.ref(`singers/${singerId}/${fileName}`);
+    const uploadTask = await storageRef.put(file);
+    const downloadURL = await uploadTask.ref.getDownloadURL();
+    return downloadURL;
+};
+
 
 // Singer Subcollections
 const docToSubcollection = <T>(docSnap: firebase.firestore.DocumentSnapshot): T => {

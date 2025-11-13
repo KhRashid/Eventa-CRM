@@ -1,23 +1,83 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Singer } from '../types';
 import { CloseIcon, ChevronLeftIcon, ChevronRightIcon, AddIcon, TrashIcon } from '../icons';
+import { uploadSingerFileToStorage, updateSinger } from '../services/firebaseService';
+
 
 interface SingerMediaGalleryProps {
   singer: Singer | null;
   permissions: Set<string>;
+  onSingerUpdate: (singer: Singer) => void;
 }
 
-const SingerMediaGallery: React.FC<SingerMediaGalleryProps> = ({ singer, permissions }) => {
+const SingerMediaGallery: React.FC<SingerMediaGalleryProps> = ({ singer, permissions, onSingerUpdate }) => {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const photos = singer?.media?.photos ?? [];
   const videos = singer?.media?.videos ?? [];
   
   const canUpdate = permissions.has('artists:update');
 
-  const handleAction = (action: string) => {
-    alert(`${action} functionality for artists is in development.`);
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, fileType: 'photo' | 'video') => {
+    const file = event.target.files?.[0];
+    if (!file || !singer) return;
+
+    setIsUploading(true);
+    try {
+        const downloadURL = await uploadSingerFileToStorage(file, singer.id);
+        
+        let updatedSinger: Singer;
+        if (fileType === 'photo') {
+            updatedSinger = {
+                ...singer,
+                media: {
+                    ...singer.media,
+                    photos: [...singer.media.photos, downloadURL],
+                },
+            };
+        } else { // video
+            updatedSinger = {
+                ...singer,
+                media: {
+                    ...singer.media,
+                    videos: [...singer.media.videos, downloadURL],
+                },
+            };
+        }
+        const savedSinger = await updateSinger(updatedSinger);
+        onSingerUpdate(savedSinger);
+    } catch (error) {
+        console.error(`Failed to upload ${fileType}:`, error);
+        alert(`Не удалось загрузить ${fileType === 'photo' ? 'фото' : 'видео'}.`);
+    } finally {
+        setIsUploading(false);
+        if (event.target) {
+            event.target.value = '';
+        }
+    }
+  };
+
+  const handleDeletePhoto = async (indexToDelete: number) => {
+    if (singer && window.confirm("Вы уверены, что хотите удалить это фото?")) {
+        const updatedPhotos = singer.media.photos.filter((_, index) => index !== indexToDelete);
+        const updatedSinger = { ...singer, media: { ...singer.media, photos: updatedPhotos } };
+        const savedSinger = await updateSinger(updatedSinger);
+        onSingerUpdate(savedSinger);
+    }
+  };
+
+  const handleDeleteVideo = async (indexToDelete: number) => {
+    if (singer && window.confirm("Вы уверены, что хотите удалить это видео?")) {
+        const updatedVideos = singer.media.videos.filter((_, index) => index !== indexToDelete);
+        const updatedSinger = { ...singer, media: { ...singer.media, videos: updatedVideos } };
+        const savedSinger = await updateSinger(updatedSinger);
+        onSingerUpdate(savedSinger);
+    }
   };
 
   const openViewer = (index: number) => {
@@ -48,7 +108,7 @@ const SingerMediaGallery: React.FC<SingerMediaGalleryProps> = ({ singer, permiss
     return () => {
         window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isViewerOpen, photos.length, goToNext, goToPrevious, closeViewer]);
+  }, [isViewerOpen, photos.length]);
 
 
   if (!singer) {
@@ -61,21 +121,29 @@ const SingerMediaGallery: React.FC<SingerMediaGalleryProps> = ({ singer, permiss
 
   return (
     <div className="bg-gray-800 rounded-lg shadow overflow-hidden h-full flex flex-col">
+       {canUpdate && (
+         <>
+           <input type="file" ref={photoInputRef} onChange={(e) => handleFileSelect(e, 'photo')} accept="image/*" style={{ display: 'none' }} />
+           <input type="file" ref={videoInputRef} onChange={(e) => handleFileSelect(e, 'video')} accept="video/*" style={{ display: 'none' }} />
+         </>
+       )}
       <div className="p-4 border-b border-gray-700 flex justify-between items-center">
         <h3 className="text-lg font-bold">Медиа</h3>
         {canUpdate && (
             <div className="flex space-x-2">
                 <button 
-                    onClick={() => handleAction('Photo upload')}
-                    className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-semibold transition-colors"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-semibold transition-colors disabled:bg-gray-500"
                 >
-                    <AddIcon /><span>Фото</span>
+                    {isUploading ? 'Загрузка...' : <><AddIcon /><span>Фото</span></>}
                 </button>
                 <button 
-                    onClick={() => handleAction('Video upload')}
-                    className="flex items-center space-x-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-xs font-semibold transition-colors"
+                    onClick={() => videoInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="flex items-center space-x-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-xs font-semibold transition-colors disabled:bg-gray-500"
                 >
-                    <AddIcon /><span>Видео</span>
+                    {isUploading ? 'Загрузка...' : <><AddIcon /><span>Видео</span></>}
                 </button>
             </div>
         )}
@@ -99,7 +167,7 @@ const SingerMediaGallery: React.FC<SingerMediaGalleryProps> = ({ singer, permiss
                       loading="lazy"
                     />
                     {canUpdate && (
-                        <button onClick={() => handleAction('Photo deletion')} className="absolute top-1 right-1 bg-black bg-opacity-60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600">
+                        <button onClick={() => handleDeletePhoto(index)} className="absolute top-1 right-1 bg-black bg-opacity-60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600">
                             <TrashIcon />
                         </button>
                     )}
@@ -118,7 +186,7 @@ const SingerMediaGallery: React.FC<SingerMediaGalleryProps> = ({ singer, permiss
                                 Видео {index + 1}
                             </a>
                             {canUpdate && (
-                                <button onClick={() => handleAction('Video deletion')} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => handleDeleteVideo(index)} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <TrashIcon/>
                                 </button>
                             )}
