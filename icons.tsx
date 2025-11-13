@@ -132,6 +132,14 @@ export const MenuBuilderIcon: React.FC = () => (
     </svg>
 );
 
+export const RepertoireBuilderIcon: React.FC = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l10-3v13M9 19c-1.105 0-2 .895-2 2s.895 2 2 2 2-.895 2-2-.895-2-2-2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h11M3 6h11M3 14h7" />
+    </svg>
+);
+
+
 export const GeminiIcon: React.FC = () => (
     <svg width="24" height="24" viewBox="0 0 28 28" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
         <path d="M14 4L11.53 11.53L4 14L11.53 16.47L14 24L16.47 16.47L24 14L16.47 11.53L14 4Z"/>

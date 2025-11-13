@@ -105,13 +105,21 @@ export interface PricingPackage {
     updated_at?: firebase.firestore.Timestamp | string;
 }
 
-export interface RepertoireSong {
+export interface Song {
     id: string;
     title: string;
     original_artist: string;
     language: string;
     genres: string[];
     duration_sec: number | null;
+    created_at?: firebase.firestore.Timestamp | string;
+    updated_at?: firebase.firestore.Timestamp | string;
+}
+
+export interface Repertoire {
+    id: string;
+    name: string;
+    songIds: string[];
 }
 
 
@@ -133,5 +141,5 @@ export interface Singer {
     updated_at: string;
     media: SingerMedia;
     pricing_packages?: PricingPackage[];
-    repertoire?: RepertoireSong[];
+    assignedRepertoireIds?: string[];
 }

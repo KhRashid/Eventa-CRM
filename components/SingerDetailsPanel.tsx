@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Singer, Lookup, PricingPackage, RepertoireSong } from '../types';
+import { Singer, Lookup, PricingPackage, Repertoire, Song } from '../types';
 import { EditIcon, TrashIcon, CloseIcon, AddIcon } from '../icons';
 import { updateSinger, deleteSinger } from '../services/firebaseService';
 import MultiSelectDropdown from './MultiSelectDropdown';
 import PricingPackageModal from './PricingPackageModal';
-import RepertoireSongModal from './RepertoireSongModal';
+import AssignRepertoiresModal from './AssignRepertoiresModal';
+
 
 interface SingerDetailsPanelProps {
   singer: Singer | null;
@@ -15,12 +16,11 @@ interface SingerDetailsPanelProps {
   onSingerDelete: (singerId: string) => void;
   lookups: Lookup[];
   pricingPackages: PricingPackage[];
-  repertoire: RepertoireSong[];
   onSavePackage: (singerId: string, pkg: Omit<PricingPackage, 'id'> | PricingPackage) => void;
   onDeletePackage: (singerId: string, packageId: string) => void;
-  onSaveSong: (singerId: string, song: Omit<RepertoireSong, 'id'> | RepertoireSong) => void;
-  onDeleteSong: (singerId: string, songId: string) => void;
   detailsLoading: boolean;
+  allRepertoires: Repertoire[];
+  allSongs: Song[];
 }
 
 const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -78,13 +78,14 @@ const statusStyles: { [key: string]: string } = {
 }
 
 const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
-    const { singer, permissions, isEditing, setIsEditing, onSingerUpdate, onSingerDelete, lookups, pricingPackages, repertoire, onSavePackage, onDeletePackage, onSaveSong, onDeleteSong, detailsLoading } = props;
+    const { singer, permissions, isEditing, setIsEditing, onSingerUpdate, onSingerDelete, lookups, pricingPackages, onSavePackage, onDeletePackage, detailsLoading, allRepertoires, allSongs } = props;
     const [editedSinger, setEditedSinger] = useState<Singer | null>(singer);
 
     const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
     const [editingPackage, setEditingPackage] = useState<PricingPackage | null>(null);
-    const [isSongModalOpen, setIsSongModalOpen] = useState(false);
-    const [editingSong, setEditingSong] = useState<RepertoireSong | null>(null);
+    const [isRepertoireModalOpen, setIsRepertoireModalOpen] = useState(false);
+    
+    const songsMap = new Map(allSongs.map(s => [s.id, s]));
 
     useEffect(() => {
         setEditedSinger(singer);
@@ -100,6 +101,7 @@ const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
     
     const canUpdate = permissions.has('artists:update');
     const canDelete = permissions.has('artists:delete');
+    const canAssignRepertoires = permissions.has('artists:assign-repertoires');
 
     const handleEditToggle = () => {
         if (isEditing) {
@@ -147,21 +149,20 @@ const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
       setEditedSinger({ ...editedSinger, [fieldName]: selectedValues });
     };
 
+    const handleSaveAssignedRepertoires = (repertoireIds: string[]) => {
+        if (!editedSinger) return;
+        setEditedSinger({ ...editedSinger, assignedRepertoireIds: repertoireIds });
+        setIsRepertoireModalOpen(false);
+    };
+
+    const assignedRepertoires = (singer.assignedRepertoireIds || [])
+        .map(id => allRepertoires.find(r => r.id === id))
+        .filter((r): r is Repertoire => r !== undefined);
+
     const renderDetails = () => {
         if (detailsLoading) {
             return <div className="p-4 text-center text-gray-400">Загрузка деталей...</div>;
         }
-
-        const renderSubSection = (title: string, items: any[], renderItem: (item: any) => React.ReactNode) => (
-            <div className="py-3">
-                <dt className="text-sm font-medium text-gray-400 mb-2">{title}</dt>
-                {items.length > 0 ? (
-                    <div className="pl-4 border-l-2 border-gray-600 space-y-3">
-                        {items.map(renderItem)}
-                    </div>
-                ) : <p className="text-sm text-gray-500 pl-4">Нет данных.</p>}
-            </div>
-        );
         
         return (
              <dl className="divide-y divide-gray-700">
@@ -175,19 +176,38 @@ const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
                 <DetailItem label="Теги" value={(singer.tags || []).map(val => <Tag key={val} text={val} />)} />
                 <DetailItem label="Языки" value={(singer.languages || []).map(val => <Tag key={val} text={val} />)} />
                 
-                {renderSubSection("Тарифные пакеты", pricingPackages, (pkg: PricingPackage) => (
-                    <div key={pkg.id}>
-                        <h4 className="font-bold text-gray-100">{pkg.title} - <span className="text-blue-400">{pkg.price} {pkg.currency}</span></h4>
-                        <p className="text-xs text-gray-400">{pkg.description}</p>
-                    </div>
-                ))}
+                <div className="py-3">
+                    <dt className="text-sm font-medium text-gray-400 mb-2">Тарифные пакеты</dt>
+                    {pricingPackages.length > 0 ? (
+                        <div className="pl-4 border-l-2 border-gray-600 space-y-3">
+                            {pricingPackages.map((pkg: PricingPackage) => (
+                                <div key={pkg.id}>
+                                    <h4 className="font-bold text-gray-100">{pkg.title} - <span className="text-blue-400">{pkg.price} {pkg.currency}</span></h4>
+                                    <p className="text-xs text-gray-400">{pkg.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : <p className="text-sm text-gray-500 pl-4">Нет данных.</p>}
+                </div>
 
-                {renderSubSection("Репертуар", repertoire, (song: RepertoireSong) => (
-                     <div key={song.id}>
-                        <h4 className="font-semibold text-gray-200">"{song.title}"</h4>
-                        <p className="text-xs text-gray-500">Оригинал: {song.original_artist}</p>
-                    </div>
-                ))}
+                <div className="py-3">
+                    <dt className="text-sm font-medium text-gray-400 mb-2">Репертуар</dt>
+                     {assignedRepertoires.length > 0 ? (
+                        assignedRepertoires.map(rep => (
+                            <div key={rep.id} className="mb-4 pl-4">
+                                <h4 className="font-bold text-gray-100">{rep.name}</h4>
+                                <ul className="list-disc list-inside ml-4 text-sm text-gray-300 columns-2">
+                                    {rep.songIds.map(songId => {
+                                        const song = songsMap.get(songId);
+                                        return song ? <li key={songId}>{song.title} <span className="text-gray-500">({song.original_artist})</span></li> : null;
+                                    })}
+                                </ul>
+                            </div>
+                        ))
+                    ) : (
+                       <p className="text-sm text-gray-500 pl-4">Репертуары не назначены.</p>
+                    )}
+                </div>
 
                 <DetailItem label="Дата создания" value={new Date(singer.created_at).toLocaleString('ru-RU')} />
             </dl>
@@ -197,27 +217,6 @@ const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
     const renderEditForm = () => {
         if (!editedSinger) return null;
         
-        const renderEditableSubSection = (title: string, items: any[], onAdd: () => void, onEdit: (item: any) => void, onDelete: (id: string) => void, renderItem: (item: any) => React.ReactNode) => (
-             <div className="py-3">
-                <div className="flex justify-between items-center mb-2">
-                    <dt className="text-sm font-medium text-gray-400">{title}</dt>
-                    <button type="button" onClick={onAdd} className="p-1 hover:bg-gray-700 rounded-full"><AddIcon /></button>
-                </div>
-                 <div className="pl-4 border-l-2 border-gray-600 space-y-2">
-                    {items.map((item) => (
-                         <div key={item.id} className="bg-gray-900 p-2 rounded-md flex justify-between items-center group">
-                            {renderItem(item)}
-                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
-                                <button type="button" onClick={() => onEdit(item)} className="text-blue-400"><EditIcon /></button>
-                                <button type="button" onClick={() => onDelete(item.id)} className="text-red-500"><TrashIcon /></button>
-                            </div>
-                         </div>
-                    ))}
-                    {items.length === 0 && <p className="text-sm text-gray-500">Нет данных. Нажмите "+", чтобы добавить.</p>}
-                 </div>
-             </div>
-        );
-
         return (
              <div className="divide-y divide-gray-700">
                 <EditInput label="Полное имя" name="name" value={editedSinger.name} onChange={handleChange} />
@@ -264,19 +263,39 @@ const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
                     );
                 })}
 
-                {renderEditableSubSection("Тарифные пакеты", pricingPackages, 
-                    () => { setEditingPackage(null); setIsPackageModalOpen(true); },
-                    (pkg) => { setEditingPackage(pkg); setIsPackageModalOpen(true); },
-                    (id) => onDeletePackage(singer.id, id),
-                    (pkg: PricingPackage) => <span>{pkg.title} - {pkg.price} {pkg.currency}</span>
-                )}
+                <div className="py-3">
+                    <div className="flex justify-between items-center mb-2">
+                        <dt className="text-sm font-medium text-gray-400">Тарифные пакеты</dt>
+                        <button type="button" onClick={() => { setEditingPackage(null); setIsPackageModalOpen(true); }} className="p-1 hover:bg-gray-700 rounded-full"><AddIcon /></button>
+                    </div>
+                    <div className="pl-4 border-l-2 border-gray-600 space-y-2">
+                        {pricingPackages.map((pkg) => (
+                            <div key={pkg.id} className="bg-gray-900 p-2 rounded-md flex justify-between items-center group">
+                                <span>{pkg.title} - {pkg.price} {pkg.currency}</span>
+                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
+                                    <button type="button" onClick={() => { setEditingPackage(pkg); setIsPackageModalOpen(true); }} className="text-blue-400"><EditIcon /></button>
+                                    <button type="button" onClick={() => onDeletePackage(singer.id, pkg.id)} className="text-red-500"><TrashIcon /></button>
+                                </div>
+                            </div>
+                        ))}
+                        {pricingPackages.length === 0 && <p className="text-sm text-gray-500">Нет данных. Нажмите "+", чтобы добавить.</p>}
+                    </div>
+                </div>
 
-                {renderEditableSubSection("Репертуар", repertoire,
-                    () => { setEditingSong(null); setIsSongModalOpen(true); },
-                    (song) => { setEditingSong(song); setIsSongModalOpen(true); },
-                    (id) => onDeleteSong(singer.id, id),
-                    (song: RepertoireSong) => <span>"{song.title}" ({song.original_artist})</span>
-                )}
+                <div className="py-3">
+                    <dt className="text-sm font-medium text-gray-400 mb-2">Репертуар</dt>
+                    {canAssignRepertoires ? (
+                         <button 
+                            onClick={() => setIsRepertoireModalOpen(true)}
+                            className="w-full text-center py-2 px-4 border-2 border-dashed border-gray-600 rounded-md text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                         >
+                            Назначить репертуары
+                         </button>
+                    ) : (
+                        <p className="text-sm text-gray-500">У вас нет прав для назначения репертуаров.</p>
+                    )}
+                </div>
+
              </div>
         );
     }
@@ -318,15 +337,13 @@ const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
                 pkg={editingPackage}
             />
         )}
-        {isSongModalOpen && (
-            <RepertoireSongModal
-                isOpen={isSongModalOpen}
-                onClose={() => setIsSongModalOpen(false)}
-                onSave={(song) => {
-                    onSaveSong(singer.id, song);
-                    setIsSongModalOpen(false);
-                }}
-                song={editingSong}
+         {isRepertoireModalOpen && editedSinger && (
+            <AssignRepertoiresModal
+                isOpen={isRepertoireModalOpen}
+                onClose={() => setIsRepertoireModalOpen(false)}
+                onSave={handleSaveAssignedRepertoires}
+                allRepertoires={allRepertoires}
+                assignedRepertoireIds={editedSinger.assignedRepertoireIds || []}
             />
         )}
     </div>

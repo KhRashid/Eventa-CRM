@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lookup, PricingPackage, RepertoireSong, Singer } from '../types';
+import { Lookup, PricingPackage, Repertoire, Singer, Song } from '../types';
 import SingersDataTable from './SingersDataTable';
 import SingerDetailsPanel from './SingerDetailsPanel';
 import SingerMediaGallery from './SingerMediaGallery';
@@ -10,16 +10,17 @@ interface ArtistsPageProps {
     singers: Singer[];
     setSingers: React.Dispatch<React.SetStateAction<Singer[]>>;
     lookups: Lookup[];
+    allSongs: Song[];
+    allRepertoires: Repertoire[];
 }
 
-const ArtistsPage: React.FC<ArtistsPageProps> = ({ permissions, singers, setSingers, lookups }) => {
+const ArtistsPage: React.FC<ArtistsPageProps> = ({ permissions, singers, setSingers, lookups, allSongs, allRepertoires }) => {
     const [selectedSinger, setSelectedSinger] = useState<Singer | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [detailsLoading, setDetailsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [pricingPackages, setPricingPackages] = useState<PricingPackage[]>([]);
-    const [repertoire, setRepertoire] = useState<RepertoireSong[]>([]);
 
     const handleRowSelect = async (singer: Singer) => {
         if (selectedSinger?.id === singer.id) return;
@@ -28,14 +29,9 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ permissions, singers, setSing
         setDetailsLoading(true);
         setError(null);
         setPricingPackages([]);
-        setRepertoire([]);
         try {
-            const [packages, songs] = await Promise.all([
-                api.getSingerPricingPackages(singer.id),
-                api.getSingerRepertoire(singer.id)
-            ]);
+            const packages = await api.getSingerPricingPackages(singer.id);
             setPricingPackages(packages);
-            setRepertoire(songs);
         } catch (err) {
             console.error(err);
             setError('Не удалось загрузить детали для артиста.');
@@ -51,7 +47,6 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ permissions, singers, setSing
             setSingers(prev => [newSinger, ...prev]);
             setSelectedSinger(newSinger);
             setPricingPackages([]);
-            setRepertoire([]);
             setIsEditing(true);
         } catch (err) {
             setError('Не удалось создать нового артиста.');
@@ -71,7 +66,6 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ permissions, singers, setSing
         setSingers(prev => prev.filter(s => s.id !== singerId));
         setSelectedSinger(null);
         setPricingPackages([]);
-        setRepertoire([]);
         setIsEditing(false);
     };
 
@@ -89,22 +83,6 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ permissions, singers, setSing
         await api.deletePricingPackage(singerId, packageId);
         setPricingPackages(prev => prev.filter(p => p.id !== packageId));
     };
-    
-    const handleSaveSong = async (singerId: string, song: Omit<RepertoireSong, 'id'> | RepertoireSong) => {
-        if ('id' in song) {
-            await api.updateRepertoireSong(singerId, song);
-            setRepertoire(prev => prev.map(s => s.id === song.id ? song : s));
-        } else {
-            const newSong = await api.createRepertoireSong(singerId, song);
-            setRepertoire(prev => [...prev, newSong]);
-        }
-    };
-
-    const handleDeleteSong = async (singerId: string, songId: string) => {
-        await api.deleteRepertoireSong(singerId, songId);
-        setRepertoire(prev => prev.filter(s => s.id !== songId));
-    };
-
 
     if (!permissions.has('artists:read')) {
         return <div className="p-4 text-center text-red-500 bg-red-900 bg-opacity-30 rounded-md w-full">У вас нет прав для просмотра этого раздела.</div>;
@@ -138,12 +116,11 @@ const ArtistsPage: React.FC<ArtistsPageProps> = ({ permissions, singers, setSing
                   onSingerDelete={handleSingerDelete}
                   lookups={lookups}
                   pricingPackages={pricingPackages}
-                  repertoire={repertoire}
                   onSavePackage={handleSavePackage}
                   onDeletePackage={handleDeletePackage}
-                  onSaveSong={handleSaveSong}
-                  onDeleteSong={handleDeleteSong}
                   detailsLoading={detailsLoading}
+                  allRepertoires={allRepertoires}
+                  allSongs={allSongs}
                 />
             </div>
         </>

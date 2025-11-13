@@ -18,11 +18,24 @@ export const ALL_PERMISSIONS = {
     { id: 'menu-packages:update', label: 'Редактирование пакетов' },
     { id: 'menu-packages:delete', label: 'Удаление пакетов' },
   ],
+  'repertoire-catalog': [
+    { id: 'repertoire-catalog:read', label: 'Просмотр фонотеки' },
+    { id: 'repertoire-catalog:create', label: 'Создание песен в фонотеке' },
+    { id: 'repertoire-catalog:update', label: 'Редактирование песен' },
+    { id: 'repertoire-catalog:delete', label: 'Удаление песен' },
+  ],
+  'repertoires': [
+    { id: 'repertoires:read', label: 'Просмотр репертуаров' },
+    { id: 'repertoires:create', label: 'Создание репертуаров' },
+    { id: 'repertoires:update', label: 'Редактирование репертуаров' },
+    { id: 'repertoires:delete', label: 'Удаление репертуаров' },
+  ],
   artists: [
     { id: 'artists:read', label: 'Просмотр артистов' },
     { id: 'artists:create', label: 'Создание артистов' },
     { id: 'artists:update', label: 'Редактирование артистов' },
     { id: 'artists:delete', label: 'Удаление артистов' },
+    { id: 'artists:assign-repertoires', label: 'Назначение репертуаров' },
   ],
   cars: [
     { id: 'cars:read', label: 'Просмотр автомобилей' },

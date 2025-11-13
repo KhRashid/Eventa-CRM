@@ -3,9 +3,9 @@ import Sidebar from './Sidebar';
 import DataTable from './components/DataTable';
 import DetailsPanel from './components/DetailsPanel';
 import MediaGallery from './components/MediaGallery';
-import { Venue, UserProfile, Role, Lookup, MenuItem, MenuPackage, Singer } from './types';
+import { Venue, UserProfile, Role, Lookup, MenuItem, MenuPackage, Singer, Song, Repertoire } from './types';
 // FIX: import createData to handle new venue creation.
-import { fetchData, getUserProfile, getRoles, getLookups, getMenuItems, getMenuPackages, getSingers, createData } from './services/firebaseService';
+import * as api from './services/firebaseService';
 import ArtistsPage from './components/ArtistsPage';
 import CarsPage from './components/CarsPage';
 import UsersPage from './components/UsersPage';
@@ -14,6 +14,7 @@ import ProfilePage from './components/ProfilePage';
 import LoginPage from './components/LoginPage';
 import LookupsPage from './components/LookupsPage';
 import MenuBuilderPage from './components/MenuBuilderPage';
+import RepertoireBuilderPage from './components/RepertoireBuilderPage';
 import { auth } from './firebaseConfig';
 import firebase from "firebase/compat/app";
 
@@ -35,6 +36,8 @@ const App: React.FC = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuPackages, setMenuPackages] = useState<MenuPackage[]>([]);
   const [singers, setSingers] = useState<Singer[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [repertoires, setRepertoires] = useState<Repertoire[]>([]);
 
 
   useEffect(() => {
@@ -42,15 +45,17 @@ const App: React.FC = () => {
         if (user) {
             setUser(user);
             try {
-                const profile = await getUserProfile(user.uid);
+                const profile = await api.getUserProfile(user.uid);
                 setUserProfile(profile);
 
-                const [roles, lookupsData, items, packages, singersData] = await Promise.all([
-                  getRoles(),
-                  getLookups(),
-                  getMenuItems(),
-                  getMenuPackages(),
-                  getSingers()
+                const [roles, lookupsData, items, packages, singersData, songsData, repertoiresData] = await Promise.all([
+                  api.getRoles(),
+                  api.getLookups(),
+                  api.getMenuItems(),
+                  api.getMenuPackages(),
+                  api.getSingers(),
+                  api.getSongs(),
+                  api.getRepertoires(),
                 ]);
 
                 setAllRoles(roles);
@@ -58,6 +63,8 @@ const App: React.FC = () => {
                 setMenuItems(items);
                 setMenuPackages(packages);
                 setSingers(singersData);
+                setSongs(songsData);
+                setRepertoires(repertoiresData);
 
                 const assignedRoles = roles.filter(role => profile.roleIds?.includes(role.id));
                 
@@ -88,7 +95,7 @@ const App: React.FC = () => {
       const getData = async () => {
         try {
           setLoading(true);
-          const result = await fetchData();
+          const result = await api.fetchData();
           setVenues(result);
           setError(null);
         } catch (err) {
@@ -134,7 +141,7 @@ const App: React.FC = () => {
   // then updates the local state to reflect the change.
   const handleVenueCreate = async () => {
     try {
-      const newVenue = await createData();
+      const newVenue = await api.createData();
       const updatedVenues = [newVenue, ...venues];
       setVenues(updatedVenues);
       setSelectedVenue(newVenue);
@@ -197,7 +204,14 @@ const App: React.FC = () => {
           </>
         );
       case 'artists':
-        return <ArtistsPage permissions={userPermissions} singers={singers} setSingers={setSingers} lookups={lookups} />;
+        return <ArtistsPage 
+                  permissions={userPermissions} 
+                  singers={singers} 
+                  setSingers={setSingers} 
+                  lookups={lookups} 
+                  allSongs={songs}
+                  allRepertoires={repertoires}
+                />;
       case 'cars':
         return <CarsPage />;
       case 'menu-builder':
@@ -209,6 +223,14 @@ const App: React.FC = () => {
                   setMenuPackages={setMenuPackages}
                   lookups={lookups}
                 />;
+      case 'repertoire-builder':
+          return <RepertoireBuilderPage
+                    permissions={userPermissions}
+                    songs={songs}
+                    setSongs={setSongs}
+                    repertoires={repertoires}
+                    setRepertoires={setRepertoires}
+                  />;
       case 'users':
         return <UsersPage permissions={userPermissions} />;
       case 'roles':

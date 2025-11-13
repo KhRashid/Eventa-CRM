@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HomeIcon, RestaurantIcon, ArtistIcon, CarIcon, UsersIcon, SettingsIcon, LogoutIcon, MenuIcon, ProfileIcon, RoleManagementIcon, ChevronDownIcon, ChevronLeftIcon, MenuBuilderIcon } from './icons';
+import { HomeIcon, RestaurantIcon, ArtistIcon, CarIcon, UsersIcon, SettingsIcon, LogoutIcon, MenuIcon, ProfileIcon, RoleManagementIcon, ChevronDownIcon, ChevronLeftIcon, MenuBuilderIcon, RepertoireBuilderIcon } from './icons';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -25,6 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, currentPage, o
   
   const settingsSubMenuItems = [
       { icon: <MenuBuilderIcon />, name: 'Menu Builder', id: 'menu-builder', permission: 'menu-catalog:read' },
+      { icon: <RepertoireBuilderIcon />, name: 'Repertoire Builder', id: 'repertoire-builder', permission: 'repertoire-catalog:read' },
       { icon: <RoleManagementIcon />, name: 'Role Management', id: 'roles', permission: 'roles:read' },
       { icon: <UsersIcon />, name: 'Users', id: 'users', permission: 'users:read' },
       { icon: <SettingsIcon />, name: 'Lookups', id: 'lookups', permission: 'lookups:read' },
