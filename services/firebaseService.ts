@@ -1,10 +1,9 @@
-// fix: Use Firebase v9 compat libraries to support v8 syntax.
 import firebase from "firebase/compat/app";
 import "firebase/compat/firestore";
 import "firebase/compat/storage";
 import "firebase/compat/auth";
 import { db, storage, auth } from '../firebaseConfig';
-import { Venue, UserProfile, Role, UserWithRoles, Lookup, MenuItem, MenuPackage } from '../types';
+import { Venue, UserProfile, Role, UserWithRoles, Lookup, MenuItem, MenuPackage, Singer, PricingPackage, RepertoireSong } from '../types';
 import { INITIAL_ROLES } from "../constants";
 
 const venuesCollectionRef = db.collection('venues');
@@ -13,6 +12,7 @@ const rolesCollectionRef = db.collection('roles');
 const lookupsCollectionRef = db.collection('lookups');
 const menuItemsCollectionRef = db.collection('menu_items');
 const menuPackagesCollectionRef = db.collection('menu_packages');
+const singersCollectionRef = db.collection('singers');
 
 
 // Helper to convert Firestore doc to Venue type with backward compatibility
@@ -289,4 +289,160 @@ export const updateMenuPackage = async (pkg: MenuPackage): Promise<void> => {
 };
 export const deleteMenuPackage = async (packageId: string): Promise<void> => {
     await menuPackagesCollectionRef.doc(packageId).delete();
+};
+
+// --- Singers Functions ---
+const docToSinger = (docSnap: firebase.firestore.DocumentSnapshot): Singer => {
+    const data = docSnap.data();
+    if (!data) {
+        throw new Error(`Document data not found for doc id: ${docSnap.id}`);
+    }
+
+    const singerData: any = {};
+    for (const key in data) {
+        if (data[key] instanceof firebase.firestore.Timestamp) {
+            singerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
+        } else {
+            singerData[key] = data[key];
+        }
+    }
+
+    return {
+        id: docSnap.id,
+        ...singerData,
+    } as Singer;
+};
+
+export const getSingers = async (): Promise<Singer[]> => {
+  const q = singersCollectionRef.orderBy('created_at', 'desc');
+  const querySnapshot = await q.get();
+  return querySnapshot.docs.map(docToSinger);
+};
+
+export const createSinger = async (): Promise<Singer> => {
+    const newSingerData = {
+        name: 'Новый артист',
+        slug: `new_artist_${Date.now()}`,
+        aliases: [],
+        gender: 'male',
+        phones: [],
+        genres: [],
+        tags: [],
+        languages: [],
+        city: '',
+        regions_covered: [],
+        contact_public: {},
+        status: 'draft',
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+        media: { photos: [], videos: [] },
+    };
+
+    const docRef = await singersCollectionRef.add(newSingerData);
+    const newDocSnapshot = await docRef.get();
+    if (newDocSnapshot.exists) {
+      return docToSinger(newDocSnapshot);
+    } else {
+      throw new Error("Could not create new singer");
+    }
+};
+
+export const updateSinger = async (singer: Singer): Promise<Singer> => {
+    const { id, pricing_packages, repertoire, ...singerData } = singer; // Exclude subcollection data
+    const singerDocRef = singersCollectionRef.doc(id);
+
+    const dataToUpdate: any = {
+        ...singerData,
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await singerDocRef.update(dataToUpdate);
+    
+    const updatedDocSnapshot = await singerDocRef.get();
+    if (updatedDocSnapshot.exists) {
+        return docToSinger(updatedDocSnapshot);
+    } else {
+        throw new Error("Failed to fetch updated singer document");
+    }
+};
+
+export const deleteSinger = async (singerId: string): Promise<void> => {
+  await singersCollectionRef.doc(singerId).delete();
+};
+
+
+// Singer Subcollections
+const docToSubcollection = <T>(docSnap: firebase.firestore.DocumentSnapshot): T => {
+    const data = docSnap.data();
+    if (!data) throw new Error("Document data not found");
+
+    const convertedData: any = {};
+    for (const key in data) {
+        if (data[key] instanceof firebase.firestore.Timestamp) {
+            convertedData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
+        } else {
+            convertedData[key] = data[key];
+        }
+    }
+    return { id: docSnap.id, ...convertedData } as T;
+}
+
+// Pricing Packages
+export const getSingerPricingPackages = async (singerId: string): Promise<PricingPackage[]> => {
+    const snapshot = await singersCollectionRef.doc(singerId).collection('pricing_packages').orderBy('created_at', 'desc').get();
+    return snapshot.docs.map(doc => docToSubcollection<PricingPackage>(doc));
+};
+
+export const createPricingPackage = async (singerId: string, pkgData: Omit<PricingPackage, 'id'>): Promise<PricingPackage> => {
+    const dataWithTimestamp = {
+        ...pkgData,
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    const docRef = await singersCollectionRef.doc(singerId).collection('pricing_packages').add(dataWithTimestamp);
+    const newDoc = await docRef.get();
+    return docToSubcollection<PricingPackage>(newDoc);
+};
+
+export const updatePricingPackage = async (singerId: string, pkg: PricingPackage): Promise<void> => {
+    const { id, ...pkgData } = pkg;
+    const dataWithTimestamp = {
+        ...pkgData,
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    await singersCollectionRef.doc(singerId).collection('pricing_packages').doc(id).update(dataWithTimestamp);
+};
+
+export const deletePricingPackage = async (singerId: string, packageId: string): Promise<void> => {
+    await singersCollectionRef.doc(singerId).collection('pricing_packages').doc(packageId).delete();
+};
+
+// Repertoire
+export const getSingerRepertoire = async (singerId: string): Promise<RepertoireSong[]> => {
+    const snapshot = await singersCollectionRef.doc(singerId).collection('repertoire').orderBy('title').get();
+    return snapshot.docs.map(doc => docToSubcollection<RepertoireSong>(doc));
+};
+
+export const createRepertoireSong = async (singerId: string, songData: Omit<RepertoireSong, 'id'>): Promise<RepertoireSong> => {
+    const dataWithTimestamp = {
+        ...songData,
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    const docRef = await singersCollectionRef.doc(singerId).collection('repertoire').add(dataWithTimestamp);
+    const newDoc = await docRef.get();
+    return docToSubcollection<RepertoireSong>(newDoc);
+};
+
+export const updateRepertoireSong = async (singerId: string, song: RepertoireSong): Promise<void> => {
+    const { id, ...songData } = song;
+    const dataWithTimestamp = {
+        ...songData,
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    await singersCollectionRef.doc(singerId).collection('repertoire').doc(id).update(dataWithTimestamp);
+};
+
+export const deleteRepertoireSong = async (singerId: string, songId: string): Promise<void> => {
+    await singersCollectionRef.doc(singerId).collection('repertoire').doc(songId).delete();
 };

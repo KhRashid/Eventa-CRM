@@ -3,9 +3,9 @@ import Sidebar from './Sidebar';
 import DataTable from './components/DataTable';
 import DetailsPanel from './components/DetailsPanel';
 import MediaGallery from './components/MediaGallery';
-import { Venue, UserProfile, Role, Lookup, MenuItem, MenuPackage } from './types';
+import { Venue, UserProfile, Role, Lookup, MenuItem, MenuPackage, Singer } from './types';
 // FIX: import createData to handle new venue creation.
-import { fetchData, getUserProfile, getRoles, getLookups, getMenuItems, getMenuPackages, createData } from './services/firebaseService';
+import { fetchData, getUserProfile, getRoles, getLookups, getMenuItems, getMenuPackages, getSingers, createData } from './services/firebaseService';
 import ArtistsPage from './components/ArtistsPage';
 import CarsPage from './components/CarsPage';
 import UsersPage from './components/UsersPage';
@@ -34,6 +34,7 @@ const App: React.FC = () => {
   const [lookups, setLookups] = useState<Lookup[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuPackages, setMenuPackages] = useState<MenuPackage[]>([]);
+  const [singers, setSingers] = useState<Singer[]>([]);
 
 
   useEffect(() => {
@@ -44,17 +45,19 @@ const App: React.FC = () => {
                 const profile = await getUserProfile(user.uid);
                 setUserProfile(profile);
 
-                const [roles, lookupsData, items, packages] = await Promise.all([
+                const [roles, lookupsData, items, packages, singersData] = await Promise.all([
                   getRoles(),
                   getLookups(),
                   getMenuItems(),
-                  getMenuPackages()
+                  getMenuPackages(),
+                  getSingers()
                 ]);
 
                 setAllRoles(roles);
                 setLookups(lookupsData);
                 setMenuItems(items);
                 setMenuPackages(packages);
+                setSingers(singersData);
 
                 const assignedRoles = roles.filter(role => profile.roleIds?.includes(role.id));
                 
@@ -194,7 +197,7 @@ const App: React.FC = () => {
           </>
         );
       case 'artists':
-        return <ArtistsPage />;
+        return <ArtistsPage permissions={userPermissions} singers={singers} setSingers={setSingers} lookups={lookups} />;
       case 'cars':
         return <CarsPage />;
       case 'menu-builder':

@@ -1,3 +1,5 @@
+import firebase from "firebase/compat/app";
+
 export interface Contact {
   email: string;
   person: string;
@@ -84,4 +86,52 @@ export interface MenuPackage {
     name: string;
     price_azn: number;
     itemIds: string[];
+}
+
+export interface SingerMedia {
+    photos: string[];
+    videos: string[];
+}
+
+export interface PricingPackage {
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+    currency: string;
+    duration_min: number;
+    is_active: boolean;
+    created_at?: firebase.firestore.Timestamp | string;
+    updated_at?: firebase.firestore.Timestamp | string;
+}
+
+export interface RepertoireSong {
+    id: string;
+    title: string;
+    original_artist: string;
+    language: string;
+    genres: string[];
+    duration_sec: number | null;
+}
+
+
+export interface Singer {
+    id: string;
+    slug: string;
+    name: string;
+    aliases: string[];
+    gender: 'female' | 'male' | 'group' | 'duo';
+    phones: string[];
+    genres: string[];
+    tags: string[];
+    languages: string[];
+    city: string;
+    regions_covered: string[];
+    contact_public: { [key: string]: string };
+    status: 'draft' | 'published' | 'paused';
+    created_at: string;
+    updated_at: string;
+    media: SingerMedia;
+    pricing_packages?: PricingPackage[];
+    repertoire?: RepertoireSong[];
 }
