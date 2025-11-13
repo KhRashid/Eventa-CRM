@@ -30,7 +30,7 @@ const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label
   </div>
 );
 
-const EditInput: React.FC<{ label: string, value: string | number, name: string, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void, type?: string }> = ({ label, value, name, onChange, type = 'text' }) => (
+const EditInput: React.FC<{ label: string, value: string | number, name: string, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void, type?: string, placeholder?: string }> = ({ label, value, name, onChange, type = 'text', placeholder }) => (
     <div className="py-2 sm:grid sm:grid-cols-3 sm:gap-4 items-center">
         <label htmlFor={name} className="block text-sm font-medium text-gray-400">{label}</label>
         <div className="mt-1 sm:mt-0 sm:col-span-2">
@@ -40,6 +40,7 @@ const EditInput: React.FC<{ label: string, value: string | number, name: string,
                 id={name}
                 value={value}
                 onChange={onChange}
+                placeholder={placeholder}
                 className="block w-full shadow-sm sm:text-sm bg-gray-700 border-gray-600 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
             />
         </div>
@@ -135,6 +136,12 @@ const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
         setEditedSinger({ ...editedSinger, [name]: value });
     };
 
+    const handleArrayChangeFromString = (fieldName: keyof Singer, value: string) => {
+        if (!editedSinger) return;
+        const newArray = value.split(',').map(s => s.trim()).filter(Boolean);
+        setEditedSinger({ ...editedSinger, [fieldName]: newArray });
+    };
+    
     const handleMultiSelectChange = (fieldName: keyof Singer, selectedValues: string[]) => {
       if (!editedSinger) return;
       setEditedSinger({ ...editedSinger, [fieldName]: selectedValues });
@@ -214,7 +221,7 @@ const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
         return (
              <div className="divide-y divide-gray-700">
                 <EditInput label="Полное имя" name="name" value={editedSinger.name} onChange={handleChange} />
-                <EditInput label="Псевдонимы" name="aliases" value={editedSinger.aliases?.join(', ') || ''} onChange={(e) => setEditedSinger({...editedSinger, aliases: e.target.value.split(',').map(s => s.trim())})} />
+                <EditInput label="Псевдонимы" name="aliases" value={editedSinger.aliases?.join(', ') || ''} onChange={(e) => handleArrayChangeFromString('aliases', e.target.value)} placeholder="Через запятую"/>
                 <EditSelect label="Пол/Тип" name="gender" value={editedSinger.gender} onChange={handleChange}>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -227,10 +234,12 @@ const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
                     <option value="paused">Paused</option>
                 </EditSelect>
                 <EditInput label="Город" name="city" value={editedSinger.city} onChange={handleChange} />
-                <EditInput label="Телефоны" name="phones" value={editedSinger.phones?.join(', ') || ''} onChange={(e) => setEditedSinger({...editedSinger, phones: e.target.value.split(',').map(s => s.trim())})} />
+                <EditInput label="Телефоны" name="phones" value={editedSinger.phones?.join(', ') || ''} onChange={(e) => handleArrayChangeFromString('phones', e.target.value)} placeholder="Через запятую" />
                 
                 {['genres', 'tags', 'languages'].map(field => {
                     const lookup = lookups.find(l => l.key === `singer_${field}`);
+                    const fieldName = field.charAt(0).toUpperCase() + field.slice(1);
+
                     return lookup ? (
                         <div className="py-2 sm:grid sm:grid-cols-3 sm:gap-4" key={lookup.id}>
                             <label className="block text-sm font-medium text-gray-400 sm:pt-2">{lookup.name}</label>
@@ -243,7 +252,16 @@ const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
                                 />
                             </div>
                         </div>
-                    ) : null
+                    ) : (
+                       <EditInput
+                            key={field}
+                            label={fieldName}
+                            name={field}
+                            value={((editedSinger as any)[field] || []).join(', ')}
+                            onChange={(e) => handleArrayChangeFromString(field as keyof Singer, e.target.value)}
+                            placeholder="Значения через запятую"
+                        />
+                    );
                 })}
 
                 {renderEditableSubSection("Тарифные пакеты", pricingPackages, 
