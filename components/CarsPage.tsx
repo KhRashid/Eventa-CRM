@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CarProvider, Car } from '../types';
+import { CarProvider, Car, Lookup } from '../types';
 import * as api from '../services/firebaseService';
 import CarProvidersDataTable from './CarProvidersDataTable';
 import CarProviderDetailsPanel from './CarProviderDetailsPanel';
@@ -9,9 +9,10 @@ interface CarsPageProps {
     permissions: Set<string>;
     carProviders: CarProvider[];
     setCarProviders: React.Dispatch<React.SetStateAction<CarProvider[]>>;
+    lookups: Lookup[];
 }
 
-const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarProviders }) => {
+const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarProviders, lookups }) => {
     const [selectedProvider, setSelectedProvider] = useState<CarProvider | null>(null);
     const [providerCars, setProviderCars] = useState<Car[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
@@ -105,6 +106,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
                   onProviderUpdate={handleProviderUpdate}
                   onProviderDelete={handleProviderDelete}
                   carsCount={providerCars.length}
+                  lookups={lookups}
                 />
             </div>
         </>

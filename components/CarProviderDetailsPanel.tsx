@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CarProvider } from '../types';
+import { CarProvider, Lookup } from '../types';
 import { EditIcon, TrashIcon, CloseIcon } from '../icons';
 import { updateCarProvider, deleteCarProvider } from '../services/firebaseService';
 
@@ -11,6 +11,7 @@ interface CarProviderDetailsPanelProps {
   onProviderUpdate: (provider: CarProvider) => void;
   onProviderDelete: (providerId: string) => void;
   carsCount: number;
+  lookups: Lookup[];
 }
 
 const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -55,7 +56,7 @@ const EditSelect: React.FC<{ label: string, value: string, name: string, onChang
 );
 
 
-const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provider, permissions, isEditing, setIsEditing, onProviderUpdate, onProviderDelete, carsCount }) => {
+const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provider, permissions, isEditing, setIsEditing, onProviderUpdate, onProviderDelete, carsCount, lookups }) => {
     const [editedProvider, setEditedProvider] = useState<CarProvider | null>(provider);
 
     useEffect(() => {
@@ -106,6 +107,11 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
         if (!editedProvider) return;
         const { name, value } = e.target;
         
+        if (name === 'phones') {
+            setEditedProvider({ ...editedProvider, phones: value.split(',').map(p => p.trim()) });
+            return;
+        }
+
         if (name.includes('.')) {
             const [section, key] = name.split('.');
             const sectionKey = section as keyof CarProvider;
@@ -114,7 +120,7 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
                 setEditedProvider({
                     ...editedProvider,
                     [sectionKey]: {
-                        ...sectionObject,
+                        ...(sectionObject as object),
                         [key]: value
                     }
                 });
@@ -176,6 +182,8 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
 
     const renderEditForm = () => {
         if (!editedProvider) return null;
+        const cityLookup = lookups.find(l => l.key === 'city_codes');
+
         return (
             <div className="divide-y divide-gray-700">
                 <EditInput label="Название" name="name" value={editedProvider.name} onChange={handleChange} />
@@ -193,7 +201,16 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
                     </div>
                 </div>
                 <EditInput label="Адрес" name="address" value={editedProvider.address} onChange={handleChange} />
-                <EditInput label="Код города" name="city_code" value={editedProvider.city_code} onChange={handleChange} placeholder="BAK, SUM, GAN..." />
+                
+                {cityLookup ? (
+                    <EditSelect label="Город" name="city_code" value={editedProvider.city_code} onChange={handleChange}>
+                        {cityLookup.values.map(city => (
+                            <option key={city} value={city}>{city}</option>
+                        ))}
+                    </EditSelect>
+                ) : (
+                    <EditInput label="Код города" name="city_code" value={editedProvider.city_code} onChange={handleChange} placeholder="BAK, SUM, GAN..." />
+                )}
                 
             </div>
         );
