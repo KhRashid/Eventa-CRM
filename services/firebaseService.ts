@@ -497,8 +497,11 @@ export const deleteRepertoire = async (repertoireId: string): Promise<void> => {
 const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProvider => {
     const data = docSnap.data();
     if (!data) throw new Error(`Document data not found for doc id: ${docSnap.id}`);
+    
     const providerData: any = {};
+    // Copy all fields except pickup_points, which will be handled separately.
     for (const key in data) {
+        if (key === 'pickup_points') continue;
         if (data[key] instanceof firebase.firestore.Timestamp) {
             providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
         } else {
@@ -506,13 +509,22 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         }
     }
     
-    // Ensure pickup_points is always an array to prevent runtime errors.
-    if (!providerData.pickup_points) {
+    // Robustly handle pickup_points to ensure it's always an array
+    const pickupPointsData = data.pickup_points;
+    if (Array.isArray(pickupPointsData)) {
+        // If it's already an array, use it as is.
+        providerData.pickup_points = pickupPointsData;
+    } else if (pickupPointsData && typeof pickupPointsData === 'object') {
+        // If it's a single object (and not an array), wrap it in an array.
+        providerData.pickup_points = [pickupPointsData];
+    } else {
+        // Default to an empty array if it's missing, null, or another type.
         providerData.pickup_points = [];
     }
 
     return { id: docSnap.id, ...providerData } as CarProvider;
 };
+
 
 const docToCar = (docSnap: firebase.firestore.DocumentSnapshot): Car => {
     const data = docSnap.data();
