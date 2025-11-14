@@ -497,10 +497,10 @@ export const deleteRepertoire = async (repertoireId: string): Promise<void> => {
 const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProvider => {
     const data = docSnap.data();
     if (!data) throw new Error(`Document data not found for doc id: ${docSnap.id}`);
-    
+
     const providerData: any = {};
+    // First, copy all data, converting timestamps
     for (const key in data) {
-         if (key === 'pickup_points' || key === 'messengers') continue;
         if (data[key] instanceof firebase.firestore.Timestamp) {
             providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
         } else {
@@ -508,21 +508,20 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         }
     }
 
-    // Normalize messengers to ensure lowercase keys
+    // Now, normalize specific fields
     if (data.messengers && typeof data.messengers === 'object') {
         const normalizedMessengers: { whatsapp?: string, telegram?: string } = {};
         for (const key in data.messengers) {
             const lowerKey = key.toLowerCase();
             if (lowerKey === 'whatsapp' || lowerKey === 'telegram') {
-                 normalizedMessengers[lowerKey as 'whatsapp' | 'telegram'] = data.messengers[key];
+                normalizedMessengers[lowerKey as 'whatsapp' | 'telegram'] = data.messengers[key];
             }
         }
         providerData.messengers = normalizedMessengers;
     } else {
         providerData.messengers = {};
     }
-    
-    // Robustly handle pickup_points to ensure it's always an array
+
     const pickupPointsData = data.pickup_points;
     if (Array.isArray(pickupPointsData)) {
         providerData.pickup_points = pickupPointsData;
@@ -530,6 +529,12 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         providerData.pickup_points = [pickupPointsData];
     } else {
         providerData.pickup_points = [];
+    }
+    
+    // Ensure 'cars' field is an array if it exists
+    if (data.cars && !Array.isArray(data.cars)) {
+        console.warn(`Provider ${docSnap.id} has a 'cars' field that is not an array. Ignoring.`);
+        delete providerData.cars;
     }
 
     return { id: docSnap.id, ...providerData } as CarProvider;

@@ -25,18 +25,25 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
 
         setSelectedProvider(provider);
         setIsEditing(false);
-        setCarsLoading(true);
         setError(null);
         setProviderCars([]);
 
-        try {
-            const cars = await api.getProviderCars(provider.id);
-            setProviderCars(cars);
-        } catch (err) {
-            console.error(err);
-            setError('Не удалось загрузить список автомобилей для этого поставщика.');
-        } finally {
-            setCarsLoading(false);
+        // New logic: Check for embedded cars first
+        if (provider.cars && Array.isArray(provider.cars) && provider.cars.length > 0) {
+            setProviderCars(provider.cars);
+            setCarsLoading(false); // No network request needed
+        } else {
+            // Fallback to fetching from subcollection
+            setCarsLoading(true);
+            try {
+                const cars = await api.getProviderCars(provider.id);
+                setProviderCars(cars);
+            } catch (err) {
+                console.error(err);
+                setError('Не удалось загрузить список автомобилей для этого поставщика.');
+            } finally {
+                setCarsLoading(false);
+            }
         }
     };
 
