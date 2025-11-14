@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { CarProvider, Lookup } from '../types';
-import { EditIcon, TrashIcon, CloseIcon } from '../icons';
+import { CarProvider, Lookup, PickupPoint } from '../types';
+import { EditIcon, TrashIcon, CloseIcon, AddIcon } from '../icons';
 import { updateCarProvider, deleteCarProvider } from '../services/firebaseService';
 
 interface CarProviderDetailsPanelProps {
@@ -62,6 +62,38 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
     useEffect(() => {
         setEditedProvider(provider);
     }, [provider]);
+
+    const handleAddPickupPoint = () => {
+        if (!editedProvider) return;
+        const newPoint: PickupPoint = { label: '', address: '', location_lat: 0, location_lng: 0 };
+        const currentPoints = editedProvider.pickup_points || [];
+        setEditedProvider({
+            ...editedProvider,
+            pickup_points: [...currentPoints, newPoint]
+        });
+    };
+
+    const handleRemovePickupPoint = (indexToRemove: number) => {
+        if (!editedProvider) return;
+        setEditedProvider({
+            ...editedProvider,
+            pickup_points: editedProvider.pickup_points.filter((_, index) => index !== indexToRemove)
+        });
+    };
+
+    const handlePickupPointChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!editedProvider) return;
+        const { name, value } = e.target;
+        const updatedPoints = [...editedProvider.pickup_points];
+        const pointToUpdate = { ...updatedPoints[index] };
+        (pointToUpdate as any)[name] = value;
+        updatedPoints[index] = pointToUpdate;
+        
+        setEditedProvider({
+            ...editedProvider,
+            pickup_points: updatedPoints
+        });
+    };
     
     if (!provider) {
         return (
@@ -203,7 +235,7 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
                 <EditInput label="Адрес" name="address" value={editedProvider.address} onChange={handleChange} />
                 
                 {cityLookup ? (
-                    <EditSelect label="Город" name="city_code" value={editedProvider.city_code} onChange={handleChange}>
+                    <EditSelect label="Код города" name="city_code" value={editedProvider.city_code} onChange={handleChange}>
                         {cityLookup.values.map(city => (
                             <option key={city} value={city}>{city}</option>
                         ))}
@@ -212,6 +244,60 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
                     <EditInput label="Код города" name="city_code" value={editedProvider.city_code} onChange={handleChange} placeholder="BAK, SUM, GAN..." />
                 )}
                 
+                <div className="py-3">
+                    <dt className="text-sm font-medium text-gray-400 mb-2">Пункты выдачи</dt>
+                    <div className="space-y-3">
+                        {(editedProvider.pickup_points || []).map((point, index) => (
+                            <div key={index} className="bg-gray-900 p-3 rounded-md relative border border-gray-700">
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemovePickupPoint(index)}
+                                    className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-600"
+                                >
+                                    <TrashIcon />
+                                </button>
+                                <div className="space-y-3 pr-8">
+                                    <div className="sm:grid sm:grid-cols-3 sm:gap-4 items-center">
+                                        <label htmlFor={`pp_label_${index}`} className="block text-sm font-medium text-gray-400">Название</label>
+                                        <div className="mt-1 sm:mt-0 sm:col-span-2">
+                                            <input 
+                                                type="text" 
+                                                name="label" 
+                                                id={`pp_label_${index}`}
+                                                value={point.label}
+                                                onChange={(e) => handlePickupPointChange(index, e)}
+                                                placeholder="Напр., Офис в центре"
+                                                className="block w-full shadow-sm sm:text-sm bg-gray-700 border-gray-600 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="sm:grid sm:grid-cols-3 sm:gap-4 items-center">
+                                        <label htmlFor={`pp_address_${index}`} className="block text-sm font-medium text-gray-400">Адрес</label>
+                                        <div className="mt-1 sm:mt-0 sm:col-span-2">
+                                            <input 
+                                                type="text" 
+                                                name="address" 
+                                                id={`pp_address_${index}`}
+                                                value={point.address}
+                                                onChange={(e) => handlePickupPointChange(index, e)}
+                                                placeholder="Улица, дом"
+                                                className="block w-full shadow-sm sm:text-sm bg-gray-700 border-gray-600 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={handleAddPickupPoint}
+                            className="w-full text-center py-2 px-4 border-2 border-dashed border-gray-600 rounded-md text-gray-400 hover:bg-gray-700 hover:text-white transition-colors flex items-center justify-center space-x-2"
+                        >
+                            <AddIcon />
+                            <span>Добавить пункт выдачи</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         );
     }
