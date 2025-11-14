@@ -198,7 +198,8 @@ const SingerDetailsPanel: React.FC<SingerDetailsPanelProps> = (props) => {
                                 <h4 className="font-bold text-gray-100">{rep.name}</h4>
                                 <ul className="list-disc list-inside ml-4 text-sm text-gray-300 columns-2">
                                     {rep.songIds.map(songId => {
-                                        const song = songsMap.get(songId);
+                                        // FIX: Cast `song` to `Song | undefined` to resolve TypeScript error where type is inferred as `unknown`.
+                                        const song = songsMap.get(songId) as Song | undefined;
                                         return song ? <li key={songId}>{song.title} <span className="text-gray-500">({song.original_artist})</span></li> : null;
                                     })}
                                 </ul>

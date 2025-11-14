@@ -198,7 +198,8 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
                                     <h4 className="font-bold text-gray-100">{pkg.name} - <span className="text-blue-400">{pkg.price_azn} AZN/чел.</span></h4>
                                     <ul className="list-disc list-inside ml-4 text-sm text-gray-300">
                                         {pkg.itemIds.map(itemId => {
-                                            const item = menuItemsMap.get(itemId);
+                                            // FIX: Cast `item` to `MenuItem | undefined` to resolve TypeScript error where type is inferred as `unknown`.
+                                            const item = menuItemsMap.get(itemId) as MenuItem | undefined;
                                             return item ? <li key={itemId}>{item.name} {item.portion_size && <span className="text-gray-500 text-xs">({item.portion_size})</span>}</li> : null;
                                         })}
                                     </ul>

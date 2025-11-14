@@ -85,7 +85,8 @@ const MenuPackageModal: React.FC<MenuPackageModalProps> = ({ isOpen, onClose, on
                                <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Поиск по каталогу..." className="w-full bg-gray-900 px-3 py-2 rounded-md" />
                            </div>
                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                                {Object.entries(groupedAvailableItems).map(([category, items]) => (
+                                {/* FIX: Explicitly type `items` as `MenuItem[]` to fix type inference issue. */}
+                                {Object.entries(groupedAvailableItems).map(([category, items]: [string, MenuItem[]]) => (
                                     <div key={category}>
                                         <h4 className="font-bold text-blue-400 mb-2">{category}</h4>
                                         <ul className="space-y-1">

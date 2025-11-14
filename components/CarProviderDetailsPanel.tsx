@@ -9,6 +9,7 @@ interface CarProviderDetailsPanelProps {
   setIsEditing: (isEditing: boolean) => void;
   onProviderUpdate: (provider: CarProvider) => void;
   onProviderDelete: (providerId: string) => void;
+  carsCount: number;
 }
 
 const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -18,7 +19,7 @@ const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label
   </div>
 );
 
-const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provider, permissions, isEditing, setIsEditing, onProviderUpdate, onProviderDelete }) => {
+const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provider, permissions, isEditing, setIsEditing, onProviderUpdate, onProviderDelete, carsCount }) => {
     
     if (!provider) {
         return (
@@ -37,6 +38,27 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
             <DetailItem label="Тип" value={provider.type} />
             <DetailItem label="Контакт" value={provider.contact_person} />
             <DetailItem label="Телефоны" value={provider.phones.join(', ')} />
+             <DetailItem 
+                label="Мессенджеры" 
+                value={
+                    !provider.messengers || (Object.keys(provider.messengers).length === 0) ? (
+                        <span className="text-gray-500">Нет данных</span>
+                    ) : (
+                        <div className="flex flex-col space-y-1">
+                            {provider.messengers.whatsapp && (
+                                <a href={`https://wa.me/${provider.messengers.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                                    WhatsApp: {provider.messengers.whatsapp}
+                                </a>
+                            )}
+                            {provider.messengers.telegram && (
+                                <a href={`https://t.me/${provider.messengers.telegram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                                    Telegram: {provider.messengers.telegram}
+                                </a>
+                            )}
+                        </div>
+                    )
+                } 
+            />
             <DetailItem label="Адрес" value={provider.address} />
             <DetailItem label="Город" value={provider.city_code} />
             
@@ -53,6 +75,8 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
                     </div>
                 ) : <p className="text-sm text-gray-500 pl-4">Нет данных.</p>}
             </div>
+            
+            <DetailItem label="Количество авто" value={carsCount} />
 
             <DetailItem label="Дата создания" value={new Date(provider.created_at).toLocaleString('ru-RU')} />
         </dl>

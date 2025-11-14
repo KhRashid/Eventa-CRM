@@ -74,6 +74,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders }) => {
                   setIsEditing={setIsEditing}
                   onProviderUpdate={(p) => console.log('Update', p)}
                   onProviderDelete={(id) => console.log('Delete', id)}
+                  carsCount={providerCars.length}
                 />
             </div>
         </>
