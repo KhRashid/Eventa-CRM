@@ -83,10 +83,12 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
 
     const handlePickupPointChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
         if (!editedProvider) return;
-        const { name, value } = e.target;
+        const { name, value, type } = e.target;
         const updatedPoints = [...editedProvider.pickup_points];
         const pointToUpdate = { ...updatedPoints[index] };
-        (pointToUpdate as any)[name] = value;
+
+        const finalValue = type === 'number' ? parseFloat(value) || 0 : value;
+        (pointToUpdate as any)[name] = finalValue;
         updatedPoints[index] = pointToUpdate;
         
         setEditedProvider({
@@ -281,6 +283,27 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
                                                 value={point.address}
                                                 onChange={(e) => handlePickupPointChange(index, e)}
                                                 placeholder="Улица, дом"
+                                                className="block w-full shadow-sm sm:text-sm bg-gray-700 border-gray-600 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="sm:grid sm:grid-cols-3 sm:gap-4 items-center">
+                                        <label className="block text-sm font-medium text-gray-400">Координаты</label>
+                                        <div className="mt-1 sm:mt-0 sm:col-span-2 grid grid-cols-2 gap-2">
+                                            <input 
+                                                type="number" 
+                                                name="location_lat"
+                                                value={point.location_lat}
+                                                onChange={(e) => handlePickupPointChange(index, e)}
+                                                placeholder="Широта"
+                                                className="block w-full shadow-sm sm:text-sm bg-gray-700 border-gray-600 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                            <input 
+                                                type="number" 
+                                                name="location_lng"
+                                                value={point.location_lng}
+                                                onChange={(e) => handlePickupPointChange(index, e)}
+                                                placeholder="Долгота"
                                                 className="block w-full shadow-sm sm:text-sm bg-gray-700 border-gray-600 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
                                             />
                                         </div>
