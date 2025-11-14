@@ -8,9 +8,10 @@ import ProviderCarsList from './ProviderCarsList';
 interface CarsPageProps {
     permissions: Set<string>;
     carProviders: CarProvider[];
+    setCarProviders: React.Dispatch<React.SetStateAction<CarProvider[]>>;
 }
 
-const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders }) => {
+const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarProviders }) => {
     const [selectedProvider, setSelectedProvider] = useState<CarProvider | null>(null);
     const [providerCars, setProviderCars] = useState<Car[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
@@ -38,6 +39,35 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders }) => {
         }
     };
 
+    const handleProviderCreate = async () => {
+        try {
+            setLoading(true);
+            const newProvider = await api.createCarProvider();
+            setCarProviders(prev => [newProvider, ...prev]);
+            setSelectedProvider(newProvider);
+            setProviderCars([]);
+            setIsEditing(true);
+        } catch (err) {
+            setError('Не удалось создать нового поставщика.');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    const handleProviderUpdate = (updatedProvider: CarProvider) => {
+        setCarProviders(prev => prev.map(p => p.id === updatedProvider.id ? updatedProvider : p));
+        setSelectedProvider(updatedProvider);
+        setIsEditing(false);
+    };
+
+    const handleProviderDelete = (providerId: string) => {
+        setCarProviders(prev => prev.filter(p => p.id !== providerId));
+        setSelectedProvider(null);
+        setProviderCars([]);
+        setIsEditing(false);
+    };
+
     if (!permissions.has('cars:read')) {
         return <div className="p-4 text-center text-red-500 bg-red-900 bg-opacity-30 rounded-md w-full">У вас нет прав для просмотра этого раздела.</div>;
     }
@@ -53,7 +83,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders }) => {
                   onRowSelect={handleRowSelect} 
                   selectedProviderId={selectedProvider?.id ?? null} 
                   permissions={permissions}
-                  onProviderCreate={() => alert('Создание поставщика в разработке')}
+                  onProviderCreate={handleProviderCreate}
                 />
               </div>
               <div className="h-2/5">
@@ -72,8 +102,8 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders }) => {
                   permissions={permissions}
                   isEditing={isEditing}
                   setIsEditing={setIsEditing}
-                  onProviderUpdate={(p) => console.log('Update', p)}
-                  onProviderDelete={(id) => console.log('Delete', id)}
+                  onProviderUpdate={handleProviderUpdate}
+                  onProviderDelete={handleProviderDelete}
                   carsCount={providerCars.length}
                 />
             </div>

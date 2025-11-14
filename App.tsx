@@ -216,7 +216,7 @@ const App: React.FC = () => {
                   allRepertoires={repertoires}
                 />;
       case 'cars':
-        return <CarsPage permissions={userPermissions} carProviders={carProviders} />;
+        return <CarsPage permissions={userPermissions} carProviders={carProviders} setCarProviders={setCarProviders} />;
       case 'menu-builder':
         return <MenuBuilderPage 
                   permissions={userPermissions} 

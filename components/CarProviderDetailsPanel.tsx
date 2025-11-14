@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CarProvider } from '../types';
 import { EditIcon, TrashIcon, CloseIcon } from '../icons';
+import { updateCarProvider, deleteCarProvider } from '../services/firebaseService';
 
 interface CarProviderDetailsPanelProps {
   provider: CarProvider | null;
@@ -19,7 +20,47 @@ const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label
   </div>
 );
 
+const EditInput: React.FC<{ label: string, value: string | number, name: string, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void, type?: string, placeholder?: string }> = ({ label, value, name, onChange, type = 'text', placeholder }) => (
+    <div className="py-2 sm:grid sm:grid-cols-3 sm:gap-4 items-center">
+        <label htmlFor={name} className="block text-sm font-medium text-gray-400">{label}</label>
+        <div className="mt-1 sm:mt-0 sm:col-span-2">
+            <input 
+                type={type} 
+                name={name} 
+                id={name}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                className="block w-full shadow-sm sm:text-sm bg-gray-700 border-gray-600 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+        </div>
+    </div>
+);
+
+const EditSelect: React.FC<{ label: string, value: string, name: string, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void, children: React.ReactNode }> = ({ label, value, name, onChange, children }) => (
+    <div className="py-2 sm:grid sm:grid-cols-3 sm:gap-4 items-center">
+        <label htmlFor={name} className="block text-sm font-medium text-gray-400">{label}</label>
+        <div className="mt-1 sm:mt-0 sm:col-span-2">
+            <select
+                name={name}
+                id={name}
+                value={value}
+                onChange={onChange}
+                className="block w-full shadow-sm sm:text-sm bg-gray-700 border-gray-600 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+                {children}
+            </select>
+        </div>
+    </div>
+);
+
+
 const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provider, permissions, isEditing, setIsEditing, onProviderUpdate, onProviderDelete, carsCount }) => {
+    const [editedProvider, setEditedProvider] = useState<CarProvider | null>(provider);
+
+    useEffect(() => {
+        setEditedProvider(provider);
+    }, [provider]);
     
     if (!provider) {
         return (
@@ -31,6 +72,57 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
     
     const canUpdate = permissions.has('cars:update');
     const canDelete = permissions.has('cars:delete');
+
+    const handleEditToggle = () => {
+        if (isEditing) {
+            setEditedProvider(provider); // Reset changes on cancel
+        }
+        setIsEditing(!isEditing);
+    };
+
+    const handleSave = async () => {
+        if (editedProvider) {
+            try {
+                const updated = await updateCarProvider(editedProvider);
+                onProviderUpdate(updated);
+            } catch (error) {
+                console.error("Failed to save provider", error);
+            }
+        }
+    };
+    
+    const handleDelete = async () => {
+        if (window.confirm(`Вы уверены, что хотите удалить поставщика "${provider.name}"?`)) {
+            try {
+                await deleteCarProvider(provider.id);
+                onProviderDelete(provider.id);
+            } catch (error) {
+                console.error("Failed to delete provider", error);
+            }
+        }
+    }
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        if (!editedProvider) return;
+        const { name, value } = e.target;
+        
+        if (name.includes('.')) {
+            const [section, key] = name.split('.');
+            const sectionKey = section as keyof CarProvider;
+            const sectionObject = editedProvider[sectionKey];
+            if (typeof sectionObject === 'object' && sectionObject !== null) {
+                setEditedProvider({
+                    ...editedProvider,
+                    [sectionKey]: {
+                        ...sectionObject,
+                        [key]: value
+                    }
+                });
+            }
+        } else {
+             setEditedProvider({ ...editedProvider, [name]: value });
+        }
+    };
 
     const renderDetails = () => (
         <dl className="divide-y divide-gray-700">
@@ -82,11 +174,30 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
         </dl>
     );
 
-    const renderEditForm = () => (
-        <div>
-            <p>Редактирование в разработке.</p>
-        </div>
-    );
+    const renderEditForm = () => {
+        if (!editedProvider) return null;
+        return (
+            <div className="divide-y divide-gray-700">
+                <EditInput label="Название" name="name" value={editedProvider.name} onChange={handleChange} />
+                <EditSelect label="Тип" name="type" value={editedProvider.type} onChange={handleChange}>
+                    <option value="individual">Individual</option>
+                    <option value="fleet">Fleet</option>
+                </EditSelect>
+                <EditInput label="Контактное лицо" name="contact_person" value={editedProvider.contact_person} onChange={handleChange} />
+                <EditInput label="Телефоны" name="phones" value={editedProvider.phones.join(', ')} onChange={handleChange} placeholder="Через запятую" />
+                <div className="py-3">
+                    <dt className="text-sm font-medium text-gray-400 mb-2">Мессенджеры</dt>
+                    <div className="pl-4 border-l-2 border-gray-600">
+                        <EditInput label="WhatsApp" name="messengers.whatsapp" value={editedProvider.messengers?.whatsapp || ''} onChange={handleChange} />
+                        <EditInput label="Telegram" name="messengers.telegram" value={editedProvider.messengers?.telegram || ''} onChange={handleChange} />
+                    </div>
+                </div>
+                <EditInput label="Адрес" name="address" value={editedProvider.address} onChange={handleChange} />
+                <EditInput label="Код города" name="city_code" value={editedProvider.city_code} onChange={handleChange} placeholder="BAK, SUM, GAN..." />
+                
+            </div>
+        );
+    }
 
     return (
         <div className="bg-gray-800 rounded-lg h-full flex flex-col overflow-hidden">
@@ -95,13 +206,13 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
                  <div className="flex items-center space-x-2 flex-shrink-0">
                     {isEditing ? (
                         <>
-                            <button onClick={() => alert('Save clicked')} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-md text-sm font-semibold">Сохранить</button>
-                            <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-gray-700 rounded-full"><CloseIcon /></button>
+                            <button onClick={handleSave} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-md text-sm font-semibold">Сохранить</button>
+                            <button onClick={handleEditToggle} className="p-2 hover:bg-gray-700 rounded-full"><CloseIcon /></button>
                         </>
                     ) : (
                         <>
-                            {canUpdate && <button onClick={() => setIsEditing(true)} className="p-2 hover:bg-gray-700 rounded-full"><EditIcon /></button>}
-                            {canDelete && <button onClick={() => alert('Delete clicked')} className="p-2 hover:bg-gray-700 rounded-full text-red-500 hover:text-red-400"><TrashIcon /></button>}
+                            {canUpdate && <button onClick={handleEditToggle} className="p-2 hover:bg-gray-700 rounded-full"><EditIcon /></button>}
+                            {canDelete && <button onClick={handleDelete} className="p-2 hover:bg-gray-700 rounded-full text-red-500 hover:text-red-400"><TrashIcon /></button>}
                         </>
                     )}
                  </div>

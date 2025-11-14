@@ -555,6 +555,54 @@ export const getCarProviders = async (): Promise<CarProvider[]> => {
     return snapshot.docs.map(docToCarProvider);
 };
 
+export const createCarProvider = async (): Promise<CarProvider> => {
+    const newProviderData = {
+        name: 'Новый поставщик',
+        contact_person: '',
+        address: '',
+        type: 'individual',
+        phones: [],
+        messengers: {},
+        city_code: 'BAK',
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+        pickup_points: [],
+    };
+
+    const docRef = await carProvidersCollectionRef.add(newProviderData);
+    const newDocSnapshot = await docRef.get();
+    if (newDocSnapshot.exists) {
+        return docToCarProvider(newDocSnapshot);
+    } else {
+        throw new Error("Could not create new car provider");
+    }
+};
+
+export const updateCarProvider = async (provider: CarProvider): Promise<CarProvider> => {
+    const { id, cars, ...providerData } = provider;
+    const providerDocRef = carProvidersCollectionRef.doc(id);
+
+    const dataToUpdate: any = {
+        ...providerData,
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await providerDocRef.update(dataToUpdate);
+    
+    const updatedDocSnapshot = await providerDocRef.get();
+    if (updatedDocSnapshot.exists) {
+        return docToCarProvider(updatedDocSnapshot);
+    } else {
+        throw new Error("Failed to fetch updated car provider document");
+    }
+};
+
+export const deleteCarProvider = async (providerId: string): Promise<void> => {
+  // This does not delete the 'cars' subcollection. A proper implementation
+  // would require a Cloud Function to handle cascading deletes.
+  await carProvidersCollectionRef.doc(providerId).delete();
+};
+
 export const getProviderCars = async (providerId: string): Promise<Car[]> => {
     const snapshot = await carProvidersCollectionRef.doc(providerId).collection('cars').orderBy('created_at', 'desc').get();
     return snapshot.docs.map(docToCar);
