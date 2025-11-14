@@ -64,7 +64,7 @@ const CarProviderDetailsPanel: React.FC<CarProviderDetailsPanelProps> = ({ provi
             
              <div className="py-3">
                 <dt className="text-sm font-medium text-gray-400 mb-2">Пункты выдачи</dt>
-                {provider.pickup_points.length > 0 ? (
+                {provider.pickup_points && provider.pickup_points.length > 0 ? (
                     <div className="pl-4 border-l-2 border-gray-600 space-y-3">
                         {provider.pickup_points.map((point, index) => (
                             <div key={index}>

@@ -505,6 +505,12 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
             providerData[key] = data[key];
         }
     }
+    
+    // Ensure pickup_points is always an array to prevent runtime errors.
+    if (!providerData.pickup_points) {
+        providerData.pickup_points = [];
+    }
+
     return { id: docSnap.id, ...providerData } as CarProvider;
 };
 
