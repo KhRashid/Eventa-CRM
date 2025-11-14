@@ -499,26 +499,36 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
     if (!data) throw new Error(`Document data not found for doc id: ${docSnap.id}`);
     
     const providerData: any = {};
-    // Copy all fields except pickup_points, which will be handled separately.
     for (const key in data) {
-        if (key === 'pickup_points') continue;
+         if (key === 'pickup_points' || key === 'messengers') continue;
         if (data[key] instanceof firebase.firestore.Timestamp) {
             providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
         } else {
             providerData[key] = data[key];
         }
     }
+
+    // Normalize messengers to ensure lowercase keys
+    if (data.messengers && typeof data.messengers === 'object') {
+        const normalizedMessengers: { whatsapp?: string, telegram?: string } = {};
+        for (const key in data.messengers) {
+            const lowerKey = key.toLowerCase();
+            if (lowerKey === 'whatsapp' || lowerKey === 'telegram') {
+                 normalizedMessengers[lowerKey as 'whatsapp' | 'telegram'] = data.messengers[key];
+            }
+        }
+        providerData.messengers = normalizedMessengers;
+    } else {
+        providerData.messengers = {};
+    }
     
     // Robustly handle pickup_points to ensure it's always an array
     const pickupPointsData = data.pickup_points;
     if (Array.isArray(pickupPointsData)) {
-        // If it's already an array, use it as is.
         providerData.pickup_points = pickupPointsData;
     } else if (pickupPointsData && typeof pickupPointsData === 'object') {
-        // If it's a single object (and not an array), wrap it in an array.
         providerData.pickup_points = [pickupPointsData];
     } else {
-        // Default to an empty array if it's missing, null, or another type.
         providerData.pickup_points = [];
     }
 
