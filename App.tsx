@@ -3,7 +3,7 @@ import Sidebar from './Sidebar';
 import DataTable from './components/DataTable';
 import DetailsPanel from './components/DetailsPanel';
 import MediaGallery from './components/MediaGallery';
-import { Venue, UserProfile, Role, Lookup, MenuItem, MenuPackage, Singer, Song, Repertoire } from './types';
+import { Venue, UserProfile, Role, Lookup, MenuItem, MenuPackage, Singer, Song, Repertoire, CarProvider } from './types';
 // FIX: import createData to handle new venue creation.
 import * as api from './services/firebaseService';
 import ArtistsPage from './components/ArtistsPage';
@@ -38,6 +38,7 @@ const App: React.FC = () => {
   const [singers, setSingers] = useState<Singer[]>([]);
   const [songs, setSongs] = useState<Song[]>([]);
   const [repertoires, setRepertoires] = useState<Repertoire[]>([]);
+  const [carProviders, setCarProviders] = useState<CarProvider[]>([]);
 
 
   useEffect(() => {
@@ -48,7 +49,7 @@ const App: React.FC = () => {
                 const profile = await api.getUserProfile(user.uid);
                 setUserProfile(profile);
 
-                const [roles, lookupsData, items, packages, singersData, songsData, repertoiresData] = await Promise.all([
+                const [roles, lookupsData, items, packages, singersData, songsData, repertoiresData, carProvidersData] = await Promise.all([
                   api.getRoles(),
                   api.getLookups(),
                   api.getMenuItems(),
@@ -56,6 +57,7 @@ const App: React.FC = () => {
                   api.getSingers(),
                   api.getSongs(),
                   api.getRepertoires(),
+                  api.getCarProviders(),
                 ]);
 
                 setAllRoles(roles);
@@ -65,6 +67,7 @@ const App: React.FC = () => {
                 setSingers(singersData);
                 setSongs(songsData);
                 setRepertoires(repertoiresData);
+                setCarProviders(carProvidersData);
 
                 const assignedRoles = roles.filter(role => profile.roleIds?.includes(role.id));
                 
@@ -213,7 +216,7 @@ const App: React.FC = () => {
                   allRepertoires={repertoires}
                 />;
       case 'cars':
-        return <CarsPage />;
+        return <CarsPage permissions={userPermissions} carProviders={carProviders} />;
       case 'menu-builder':
         return <MenuBuilderPage 
                   permissions={userPermissions} 

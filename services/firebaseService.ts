@@ -3,7 +3,7 @@ import "firebase/compat/firestore";
 import "firebase/compat/storage";
 import "firebase/compat/auth";
 import { db, storage, auth } from '../firebaseConfig';
-import { Venue, UserProfile, Role, UserWithRoles, Lookup, MenuItem, MenuPackage, Singer, PricingPackage, Song, Repertoire } from '../types';
+import { Venue, UserProfile, Role, UserWithRoles, Lookup, MenuItem, MenuPackage, Singer, PricingPackage, Song, Repertoire, CarProvider, Car } from '../types';
 import { INITIAL_ROLES } from "../constants";
 
 const venuesCollectionRef = db.collection('venues');
@@ -15,6 +15,7 @@ const menuPackagesCollectionRef = db.collection('menu_packages');
 const singersCollectionRef = db.collection('singers');
 const songsCollectionRef = db.collection('songs');
 const repertoiresCollectionRef = db.collection('repertoires');
+const carProvidersCollectionRef = db.collection('car_providers');
 
 
 // Helper to convert Firestore doc to Venue type with backward compatibility
@@ -490,4 +491,43 @@ export const updateRepertoire = async (repertoire: Repertoire): Promise<void> =>
 };
 export const deleteRepertoire = async (repertoireId: string): Promise<void> => {
     await repertoiresCollectionRef.doc(repertoireId).delete();
+};
+
+// --- Car Provider Functions ---
+const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProvider => {
+    const data = docSnap.data();
+    if (!data) throw new Error(`Document data not found for doc id: ${docSnap.id}`);
+    const providerData: any = {};
+    for (const key in data) {
+        if (data[key] instanceof firebase.firestore.Timestamp) {
+            providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
+        } else {
+            providerData[key] = data[key];
+        }
+    }
+    return { id: docSnap.id, ...providerData } as CarProvider;
+};
+
+const docToCar = (docSnap: firebase.firestore.DocumentSnapshot): Car => {
+    const data = docSnap.data();
+    if (!data) throw new Error(`Document data not found for doc id: ${docSnap.id}`);
+    const carData: any = {};
+    for (const key in data) {
+        if (data[key] instanceof firebase.firestore.Timestamp) {
+            carData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
+        } else {
+            carData[key] = data[key];
+        }
+    }
+    return { id: docSnap.id, ...carData } as Car;
+};
+
+export const getCarProviders = async (): Promise<CarProvider[]> => {
+    const snapshot = await carProvidersCollectionRef.orderBy('created_at', 'desc').get();
+    return snapshot.docs.map(docToCarProvider);
+};
+
+export const getProviderCars = async (providerId: string): Promise<Car[]> => {
+    const snapshot = await carProvidersCollectionRef.doc(providerId).collection('cars').orderBy('created_at', 'desc').get();
+    return snapshot.docs.map(docToCar);
 };

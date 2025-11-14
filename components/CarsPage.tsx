@@ -1,12 +1,83 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { CarProvider, Car } from '../types';
+import * as api from '../services/firebaseService';
+import CarProvidersDataTable from './CarProvidersDataTable';
+import CarProviderDetailsPanel from './CarProviderDetailsPanel';
+import ProviderCarsList from './ProviderCarsList';
 
-const CarsPage: React.FC = () => {
-  return (
-    <div className="w-full bg-gray-800 rounded-lg p-6 h-full flex flex-col items-center justify-center text-center">
-      <h1 className="text-3xl font-bold text-blue-400 mb-4">Автомобили</h1>
-      <p className="text-gray-400">Здесь будет каталог автомобилей. Функционал находится в разработке.</p>
-    </div>
-  );
+interface CarsPageProps {
+    permissions: Set<string>;
+    carProviders: CarProvider[];
+}
+
+const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders }) => {
+    const [selectedProvider, setSelectedProvider] = useState<CarProvider | null>(null);
+    const [providerCars, setProviderCars] = useState<Car[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [carsLoading, setCarsLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
+
+    const handleRowSelect = async (provider: CarProvider) => {
+        if (selectedProvider?.id === provider.id) return;
+
+        setSelectedProvider(provider);
+        setIsEditing(false);
+        setCarsLoading(true);
+        setError(null);
+        setProviderCars([]);
+
+        try {
+            const cars = await api.getProviderCars(provider.id);
+            setProviderCars(cars);
+        } catch (err) {
+            console.error(err);
+            setError('Не удалось загрузить список автомобилей для этого поставщика.');
+        } finally {
+            setCarsLoading(false);
+        }
+    };
+
+    if (!permissions.has('cars:read')) {
+        return <div className="p-4 text-center text-red-500 bg-red-900 bg-opacity-30 rounded-md w-full">У вас нет прав для просмотра этого раздела.</div>;
+    }
+
+    return (
+        <>
+            <div className="w-2/3 flex flex-col space-y-6">
+              <div className="h-3/5">
+                <CarProvidersDataTable
+                  providers={carProviders}
+                  loading={loading}
+                  error={error}
+                  onRowSelect={handleRowSelect} 
+                  selectedProviderId={selectedProvider?.id ?? null} 
+                  permissions={permissions}
+                  onProviderCreate={() => alert('Создание поставщика в разработке')}
+                />
+              </div>
+              <div className="h-2/5">
+                <ProviderCarsList
+                    provider={selectedProvider}
+                    cars={providerCars}
+                    loading={carsLoading}
+                    error={error}
+                    permissions={permissions}
+                />
+              </div>
+            </div>
+            <div className="w-1/3">
+               <CarProviderDetailsPanel
+                  provider={selectedProvider}
+                  permissions={permissions}
+                  isEditing={isEditing}
+                  setIsEditing={setIsEditing}
+                  onProviderUpdate={(p) => console.log('Update', p)}
+                  onProviderDelete={(id) => console.log('Delete', id)}
+                />
+            </div>
+        </>
+    );
 };
 
 export default CarsPage;
