@@ -175,7 +175,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
               </div>
             </div>
             <div className="w-1/3 flex flex-col space-y-6">
-                <div className="h-1/2">
+                <div className="h-3/5">
                    <CarProviderDetailsPanel
                       provider={selectedProvider}
                       permissions={permissions}
@@ -187,7 +187,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
                       lookups={lookups}
                     />
                 </div>
-                 <div className="h-1/2">
+                 <div className="h-2/5">
                     <CarMediaGallery
                         selectedCar={selectedCar}
                         providerId={selectedProvider?.id}

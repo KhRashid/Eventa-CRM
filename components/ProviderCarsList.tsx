@@ -17,14 +17,11 @@ interface ProviderCarsListProps {
 
 const CarCard: React.FC<{ car: Car; onUpdate: () => void; onDelete: () => void; onSelect: () => void; selected: boolean; canUpdate: boolean; canDelete: boolean; }> = 
 ({ car, onUpdate, onDelete, onSelect, selected, canUpdate, canDelete }) => {
-    const mainPhoto = car.media?.photos?.[0] || 'https://via.placeholder.com/300x200?text=No+Image';
-
     return (
         <button 
             onClick={onSelect}
-            className={`w-full bg-gray-900 rounded-lg shadow-md overflow-hidden flex flex-col md:flex-row group relative text-left transition-all duration-200 ${selected ? 'ring-2 ring-blue-500' : 'ring-1 ring-gray-700 hover:ring-gray-600'}`}
+            className={`w-full bg-gray-900 rounded-lg shadow-md overflow-hidden flex group relative text-left transition-all duration-200 ${selected ? 'ring-2 ring-blue-500' : 'ring-1 ring-gray-700 hover:ring-gray-600'}`}
         >
-            <img src={mainPhoto} alt={`${car.brand} ${car.model}`} className="w-full md:w-48 h-32 md:h-auto object-cover flex-shrink-0" />
             <div className="p-4 flex flex-col justify-between flex-1">
                 <div>
                     <h3 className="text-lg font-bold text-white">{car.brand} {car.model} <span className="text-gray-400 font-normal">({car.year})</span></h3>
