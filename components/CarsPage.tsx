@@ -36,20 +36,16 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         setError(null);
         setProviderCars([]);
         setSelectedCar(null); // Deselect car when provider changes
-
-        if (provider.cars && provider.cars.length > 0) {
-            setProviderCars(provider.cars);
-        } else {
-            setCarsLoading(true);
-            try {
-                const cars = await api.getProviderCars(provider.id);
-                setProviderCars(cars);
-            } catch (err) {
-                console.error(err);
-                setError('Не удалось загрузить список автомобилей для этого поставщика.');
-            } finally {
-                setCarsLoading(false);
-            }
+        
+        setCarsLoading(true);
+        try {
+            const cars = await api.getProviderCars(provider.id);
+            setProviderCars(cars);
+        } catch (err) {
+            console.error(err);
+            setError('Не удалось загрузить список автомобилей для этого поставщика.');
+        } finally {
+            setCarsLoading(false);
         }
     };
 
@@ -99,7 +95,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         if (!selectedProvider) return;
         if (window.confirm('Вы уверены, что хотите удалить этот автомобиль?')) {
             try {
-                await api.deleteCar(selectedProvider.id, carId);
+                await api.deleteCar(carId);
                 setProviderCars(prev => prev.filter(c => c.id !== carId));
                 if (selectedCar?.id === carId) {
                     setSelectedCar(null);
@@ -114,17 +110,15 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     const handleSaveCar = async (carData: Omit<Car, 'id'> | Car) => {
         if (!selectedProvider) return;
         try {
-            // FIX: Use a type-safe check for the 'id' property to differentiate between create and update operations.
             if ('id' in carData && carData.id) {
-                const updatedCar = await api.updateCar(selectedProvider.id, carData);
+                const updatedCar = await api.updateCar(carData);
                 setProviderCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
                 if (selectedCar?.id === updatedCar.id) {
                     setSelectedCar(updatedCar);
                 }
             } else {
-                // If it's a new car, we must pass the data without an 'id' field.
                 const { id, ...dataForCreation } = carData as Car;
-                const newCar = await api.createCar(selectedProvider.id, dataForCreation);
+                const newCar = await api.createCar(selectedProvider.id, selectedProvider.name, dataForCreation);
                 setProviderCars(prev => [newCar, ...prev]);
             }
             setIsCarModalOpen(false);
@@ -204,6 +198,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
                     onSave={handleSaveCar}
                     car={editingCar}
                     providerId={selectedProvider.id}
+                    providerName={selectedProvider.name}
                     lookups={lookups}
                 />
             )}

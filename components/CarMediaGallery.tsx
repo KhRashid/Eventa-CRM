@@ -18,16 +18,16 @@ const CarMediaGallery: React.FC<CarMediaGalleryProps> = ({ selectedCar, provider
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !selectedCar || !providerId) return;
+    if (!file || !selectedCar?.id || !providerId) return;
 
     setIsUploading(true);
     try {
-      const downloadURL = await api.uploadCarPhoto(providerId, selectedCar.id, file);
+      const downloadURL = await api.uploadCarPhoto(selectedCar.id, file);
       const updatedPhotos = [...(selectedCar.media?.photos || []), downloadURL];
       const updatedCar: Car = { ...selectedCar, media: { ...selectedCar.media, photos: updatedPhotos } };
       
-      await api.updateCar(providerId, updatedCar);
-      onCarUpdate(updatedCar);
+      const savedCar = await api.updateCar(updatedCar);
+      onCarUpdate(savedCar);
     } catch (error) {
       console.error("Failed to upload photo:", error);
       alert("Не удалось загрузить фото.");
@@ -43,13 +43,21 @@ const CarMediaGallery: React.FC<CarMediaGalleryProps> = ({ selectedCar, provider
     try {
         const updatedPhotos = selectedCar.media.photos.filter((_, index) => index !== indexToDelete);
         const updatedCar = { ...selectedCar, media: { ...selectedCar.media, photos: updatedPhotos } };
-        await api.updateCar(providerId, updatedCar);
-        onCarUpdate(updatedCar);
+        const savedCar = await api.updateCar(updatedCar);
+        onCarUpdate(savedCar);
     } catch (error) {
         console.error("Failed to delete photo:", error);
         alert("Не удалось удалить фото.");
     }
   };
+
+  if (!providerId) {
+     return (
+      <div className="bg-gray-800 rounded-lg p-6 h-full flex items-center justify-center">
+        <p className="text-gray-400">Выберите поставщика.</p>
+      </div>
+    );
+  }
 
   if (!selectedCar) {
     return (
@@ -68,8 +76,9 @@ const CarMediaGallery: React.FC<CarMediaGalleryProps> = ({ selectedCar, provider
             {canUpdate && (
                  <button
                     onClick={() => photoInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-md transition-colors text-sm disabled:bg-gray-500"
+                    disabled={isUploading || !selectedCar.id}
+                    className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-md transition-colors text-sm disabled:bg-gray-500 disabled:cursor-not-allowed"
+                    title={!selectedCar.id ? "Сначала сохраните автомобиль" : "Добавить фото"}
                     >
                     <AddIcon />
                     <span>Добавить</span>

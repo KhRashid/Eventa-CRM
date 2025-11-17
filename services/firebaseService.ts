@@ -16,6 +16,7 @@ const singersCollectionRef = db.collection('singers');
 const songsCollectionRef = db.collection('songs');
 const repertoiresCollectionRef = db.collection('repertoires');
 const carProvidersCollectionRef = db.collection('car_providers');
+const carsCollectionRef = db.collection('cars');
 
 
 // Helper to convert Firestore doc to Venue type with backward compatibility
@@ -499,7 +500,6 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
     if (!data) throw new Error(`Document data not found for doc id: ${docSnap.id}`);
 
     const providerData: any = {};
-    // First, copy all data, converting timestamps and including embedded 'cars' array if it exists.
     for (const key in data) {
         if (data[key] instanceof firebase.firestore.Timestamp) {
             providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
@@ -508,7 +508,6 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         }
     }
 
-    // Now, normalize specific fields for consistency
     if (data.messengers && typeof data.messengers === 'object') {
         const normalizedMessengers: { whatsapp?: string, telegram?: string } = {};
         for (const key in data.messengers) {
@@ -531,6 +530,9 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         providerData.pickup_points = [];
     }
 
+    // This field will be populated by a separate query, so we don't read it from the provider doc
+    delete providerData.cars;
+
     return { id: docSnap.id, ...providerData } as CarProvider;
 };
 
@@ -548,7 +550,6 @@ const docToCar = (docSnap: firebase.firestore.DocumentSnapshot): Car => {
         }
     }
 
-    // Ensure media object and photos array exist for robustness
     if (!carData.media) {
         carData.media = { photos: [] };
     } else if (!carData.media.photos) {
@@ -606,47 +607,52 @@ export const updateCarProvider = async (provider: CarProvider): Promise<CarProvi
 };
 
 export const deleteCarProvider = async (providerId: string): Promise<void> => {
-  // This does not delete the 'cars' subcollection. A proper implementation
-  // would require a Cloud Function to handle cascading deletes.
   await carProvidersCollectionRef.doc(providerId).delete();
 };
 
 export const getProviderCars = async (providerId: string): Promise<Car[]> => {
-    const snapshot = await carProvidersCollectionRef.doc(providerId).collection('cars').orderBy('created_at', 'desc').get();
+    const snapshot = await carsCollectionRef
+        .where('car_provider.car_provider_id', '==', providerId)
+        .orderBy('created_at', 'desc')
+        .get();
     return snapshot.docs.map(docToCar);
 };
 
-// --- Car Subcollection Functions ---
-export const createCar = async (providerId: string, carData: Omit<Car, 'id'>): Promise<Car> => {
+// --- Car Top-Level Collection Functions ---
+export const createCar = async (providerId: string, providerName: string, carData: Omit<Car, 'id'>): Promise<Car> => {
     const dataWithTimestamp = {
         ...carData,
+        car_provider: {
+            car_provider_id: providerId,
+            name: providerName
+        },
         created_at: firebase.firestore.FieldValue.serverTimestamp(),
         updated_at: firebase.firestore.FieldValue.serverTimestamp(),
     };
-    const docRef = await carProvidersCollectionRef.doc(providerId).collection('cars').add(dataWithTimestamp);
+    const docRef = await carsCollectionRef.add(dataWithTimestamp);
     const newDoc = await docRef.get();
     return docToCar(newDoc);
 };
 
-export const updateCar = async (providerId: string, car: Car): Promise<Car> => {
+export const updateCar = async (car: Car): Promise<Car> => {
     const { id, ...carData } = car;
     const dataWithTimestamp = {
         ...carData,
         updated_at: firebase.firestore.FieldValue.serverTimestamp(),
     };
-    const carDocRef = carProvidersCollectionRef.doc(providerId).collection('cars').doc(id);
+    const carDocRef = carsCollectionRef.doc(id);
     await carDocRef.update(dataWithTimestamp);
     const updatedDoc = await carDocRef.get();
     return docToCar(updatedDoc);
 };
 
-export const deleteCar = async (providerId: string, carId: string): Promise<void> => {
-    await carProvidersCollectionRef.doc(providerId).collection('cars').doc(carId).delete();
+export const deleteCar = async (carId: string): Promise<void> => {
+    await carsCollectionRef.doc(carId).delete();
 };
 
-export const uploadCarPhoto = async (providerId: string, carId: string, file: File): Promise<string> => {
+export const uploadCarPhoto = async (carId: string, file: File): Promise<string> => {
     const fileName = `${new Date().getTime()}_${file.name}`;
-    const storageRef = storage.ref(`car_providers/${providerId}/cars/${carId}/${fileName}`);
+    const storageRef = storage.ref(`cars/${carId}/${fileName}`);
     const uploadTask = await storageRef.put(file);
     const downloadURL = await uploadTask.ref.getDownloadURL();
     return downloadURL;

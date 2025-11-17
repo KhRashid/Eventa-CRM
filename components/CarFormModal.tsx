@@ -9,10 +9,11 @@ interface CarFormModalProps {
     onSave: (car: Omit<Car, 'id'> | Car) => void;
     car: Car | null;
     providerId: string;
+    providerName: string;
     lookups: Lookup[];
 }
 
-const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, car, providerId, lookups }) => {
+const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, car, providerId, providerName, lookups }) => {
     const getInitialState = (): Car => {
         if (car) return car;
         
@@ -41,7 +42,7 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
                 price: { base: 0, min_time: 1, extra_hour_fee: 0 }
             },
             coverage_cities: [],
-            car_provider: { car_provider_id: providerId, name: '' },
+            car_provider: { car_provider_id: providerId, name: providerName },
             media: { photos: [] },
             created_at: '',
             updated_at: '',
