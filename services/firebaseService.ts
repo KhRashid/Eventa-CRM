@@ -651,13 +651,3 @@ export const uploadCarPhoto = async (providerId: string, carId: string, file: Fi
     const downloadURL = await uploadTask.ref.getDownloadURL();
     return downloadURL;
 };
-
-export const deleteCarPhotoFromStorage = async (photoUrl: string): Promise<void> => {
-    try {
-        const photoRef = storage.refFromURL(photoUrl);
-        await photoRef.delete();
-    } catch (error) {
-        console.error("Failed to delete photo from storage:", error);
-        // Non-critical error, continue
-    }
-};

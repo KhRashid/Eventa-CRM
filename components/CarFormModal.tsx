@@ -114,21 +114,16 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
         setIsUploading(true);
         try {
             const downloadURL = await api.uploadCarPhoto(providerId, editedCar.id, file);
-            const currentMedia = editedCar.media || { photos: [] };
-            const currentPhotos = currentMedia.photos || [];
-            const updatedPhotos = [...currentPhotos, downloadURL];
-            
-            const updatedCar = {
-                ...editedCar,
-                media: { ...currentMedia, photos: updatedPhotos }
-            };
-            
-            // Save to database
-            const savedCar = await api.updateCar(providerId, updatedCar);
-            
-            setEditedCar(savedCar);
-            // Update parent component state
-            onSave(savedCar);
+            setEditedCar(prev => {
+                if (!prev) return getInitialState();
+                const currentMedia = prev.media || { photos: [] };
+                const currentPhotos = currentMedia.photos || [];
+                const updatedPhotos = [...currentPhotos, downloadURL];
+                return {
+                    ...prev,
+                    media: { ...currentMedia, photos: updatedPhotos }
+                };
+            });
         } catch (error) {
             console.error("Failed to upload photo", error);
             alert("Не удалось загрузить фото.");
@@ -138,34 +133,18 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
         }
     };
 
-    const handleDeletePhoto = async (indexToDelete: number) => {
-        if (!editedCar || !editedCar.id) return;
+    const handleDeletePhoto = (indexToDelete: number) => {
+        if (!editedCar) return;
         if (window.confirm("Вы уверены, что хотите удалить это фото?")) {
-            try {
-                const currentPhotos = editedCar.media?.photos || [];
-                const photoToDelete = currentPhotos[indexToDelete];
+            setEditedCar(prev => {
+                if (!prev) return getInitialState();
+                const currentPhotos = prev.media?.photos || [];
                 const updatedPhotos = currentPhotos.filter((_, index) => index !== indexToDelete);
-                
-                const updatedCar = {
-                    ...editedCar,
-                    media: { ...editedCar.media, photos: updatedPhotos }
+                return {
+                    ...prev,
+                    media: { ...prev.media, photos: updatedPhotos }
                 };
-                
-                // Delete from storage
-                if (photoToDelete) {
-                    await api.deleteCarPhotoFromStorage(photoToDelete);
-                }
-                
-                // Save to database
-                const savedCar = await api.updateCar(providerId, updatedCar);
-                
-                setEditedCar(savedCar);
-                // Update parent component state
-                onSave(savedCar);
-            } catch (error) {
-                console.error("Failed to delete photo", error);
-                alert("Не удалось удалить фото.");
-            }
+            });
         }
     };
 

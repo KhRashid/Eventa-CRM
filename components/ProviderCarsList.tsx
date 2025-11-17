@@ -11,14 +11,20 @@ interface ProviderCarsListProps {
   onCarCreate: () => void;
   onCarUpdate: (car: Car) => void;
   onCarDelete: (carId: string) => void;
+  onCarSelect: (car: Car) => void;
+  selectedCarId: string | undefined | null;
 }
 
-const CarCard: React.FC<{ car: Car; onUpdate: () => void; onDelete: () => void; canUpdate: boolean; canDelete: boolean; }> = ({ car, onUpdate, onDelete, canUpdate, canDelete }) => {
+const CarCard: React.FC<{ car: Car; onUpdate: () => void; onDelete: () => void; onSelect: () => void; selected: boolean; canUpdate: boolean; canDelete: boolean; }> = 
+({ car, onUpdate, onDelete, onSelect, selected, canUpdate, canDelete }) => {
     const mainPhoto = car.media?.photos?.[0] || 'https://via.placeholder.com/300x200?text=No+Image';
 
     return (
-        <div className="bg-gray-900 rounded-lg shadow-md overflow-hidden flex flex-col md:flex-row group relative">
-            <img src={mainPhoto} alt={`${car.brand} ${car.model}`} className="w-full md:w-48 h-32 md:h-auto object-cover" />
+        <button 
+            onClick={onSelect}
+            className={`w-full bg-gray-900 rounded-lg shadow-md overflow-hidden flex flex-col md:flex-row group relative text-left transition-all duration-200 ${selected ? 'ring-2 ring-blue-500' : 'ring-1 ring-gray-700 hover:ring-gray-600'}`}
+        >
+            <img src={mainPhoto} alt={`${car.brand} ${car.model}`} className="w-full md:w-48 h-32 md:h-auto object-cover flex-shrink-0" />
             <div className="p-4 flex flex-col justify-between flex-1">
                 <div>
                     <h3 className="text-lg font-bold text-white">{car.brand} {car.model} <span className="text-gray-400 font-normal">({car.year})</span></h3>
@@ -35,15 +41,15 @@ const CarCard: React.FC<{ car: Car; onUpdate: () => void; onDelete: () => void; 
                     </p>
                 </div>
             </div>
-             <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 bg-opacity-70 p-1 rounded-md">
-                {canUpdate && <button onClick={onUpdate} className="p-1 text-blue-400 hover:text-blue-300"><EditIcon /></button>}
-                {canDelete && <button onClick={onDelete} className="p-1 text-red-500 hover:text-red-400"><TrashIcon /></button>}
+             <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 bg-opacity-70 p-1 rounded-md z-10">
+                {canUpdate && <button type="button" onClick={(e) => { e.stopPropagation(); onUpdate(); }} className="p-1 text-blue-400 hover:text-blue-300"><EditIcon /></button>}
+                {canDelete && <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-red-500 hover:text-red-400"><TrashIcon /></button>}
             </div>
-        </div>
+        </button>
     );
 };
 
-const ProviderCarsList: React.FC<ProviderCarsListProps> = ({ provider, cars, loading, error, permissions, onCarCreate, onCarUpdate, onCarDelete }) => {
+const ProviderCarsList: React.FC<ProviderCarsListProps> = ({ provider, cars, loading, error, permissions, onCarCreate, onCarUpdate, onCarDelete, onCarSelect, selectedCarId }) => {
 
   if (!provider) {
     return (
@@ -79,7 +85,9 @@ const ProviderCarsList: React.FC<ProviderCarsListProps> = ({ provider, cars, loa
                     <div className="space-y-4">
                         {cars.map(car => <CarCard 
                                             key={car.id} 
-                                            car={car} 
+                                            car={car}
+                                            onSelect={() => onCarSelect(car)}
+                                            selected={car.id === selectedCarId}
                                             onUpdate={() => onCarUpdate(car)}
                                             onDelete={() => onCarDelete(car.id)}
                                             canUpdate={canUpdate}

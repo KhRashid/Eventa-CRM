@@ -5,6 +5,7 @@ import CarProvidersDataTable from './CarProvidersDataTable';
 import CarProviderDetailsPanel from './CarProviderDetailsPanel';
 import ProviderCarsList from './ProviderCarsList';
 import CarFormModal from './CarFormModal';
+import CarMediaGallery from './CarMediaGallery';
 
 interface CarsPageProps {
     permissions: Set<string>;
@@ -24,6 +25,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     // State for Car Modal
     const [isCarModalOpen, setIsCarModalOpen] = useState(false);
     const [editingCar, setEditingCar] = useState<Car | null>(null);
+    const [selectedCar, setSelectedCar] = useState<Car | null>(null);
 
 
     const handleRowSelect = async (provider: CarProvider) => {
@@ -33,13 +35,11 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         setIsEditingProvider(false);
         setError(null);
         setProviderCars([]);
+        setSelectedCar(null); // Deselect car when provider changes
 
-        // Flexible car data loading
         if (provider.cars && provider.cars.length > 0) {
-            // If cars are embedded in the provider document, use them directly.
             setProviderCars(provider.cars);
         } else {
-            // Otherwise, fetch from the 'cars' subcollection.
             setCarsLoading(true);
             try {
                 const cars = await api.getProviderCars(provider.id);
@@ -60,6 +60,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
             setCarProviders(prev => [newProvider, ...prev]);
             setSelectedProvider(newProvider);
             setProviderCars([]);
+            setSelectedCar(null);
             setIsEditingProvider(true);
         } catch (err) {
             setError('Не удалось создать нового поставщика.');
@@ -79,6 +80,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         setCarProviders(prev => prev.filter(p => p.id !== providerId));
         setSelectedProvider(null);
         setProviderCars([]);
+        setSelectedCar(null);
         setIsEditingProvider(false);
     };
 
@@ -99,6 +101,9 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
             try {
                 await api.deleteCar(selectedProvider.id, carId);
                 setProviderCars(prev => prev.filter(c => c.id !== carId));
+                if (selectedCar?.id === carId) {
+                    setSelectedCar(null);
+                }
             } catch (err) {
                 console.error(err);
                 setError('Не удалось удалить автомобиль.');
@@ -109,18 +114,30 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     const handleSaveCar = async (carData: Omit<Car, 'id'> | Car) => {
         if (!selectedProvider) return;
         try {
-            if ('id' in carData) {
+            // FIX: Use a type-safe check for the 'id' property to differentiate between create and update operations.
+            if ('id' in carData && carData.id) {
                 const updatedCar = await api.updateCar(selectedProvider.id, carData);
                 setProviderCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
+                if (selectedCar?.id === updatedCar.id) {
+                    setSelectedCar(updatedCar);
+                }
             } else {
-                const newCar = await api.createCar(selectedProvider.id, carData);
+                // If it's a new car, we must pass the data without an 'id' field.
+                const { id, ...dataForCreation } = carData as Car;
+                const newCar = await api.createCar(selectedProvider.id, dataForCreation);
                 setProviderCars(prev => [newCar, ...prev]);
             }
             setIsCarModalOpen(false);
+            setEditingCar(null);
         } catch (err) {
             console.error(err);
             setError('Не удалось сохранить автомобиль.');
         }
+    };
+
+    const handleCarUpdateFromGallery = (updatedCar: Car) => {
+        setProviderCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
+        setSelectedCar(updatedCar);
     };
 
 
@@ -152,20 +169,32 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
                     onCarCreate={handleCarCreate}
                     onCarUpdate={handleCarUpdate}
                     onCarDelete={handleCarDelete}
+                    onCarSelect={setSelectedCar}
+                    selectedCarId={selectedCar?.id}
                 />
               </div>
             </div>
-            <div className="w-1/3">
-               <CarProviderDetailsPanel
-                  provider={selectedProvider}
-                  permissions={permissions}
-                  isEditing={isEditingProvider}
-                  setIsEditing={setIsEditingProvider}
-                  onProviderUpdate={handleProviderUpdate}
-                  onProviderDelete={handleProviderDelete}
-                  carsCount={providerCars.length}
-                  lookups={lookups}
-                />
+            <div className="w-1/3 flex flex-col space-y-6">
+                <div className="h-1/2">
+                   <CarProviderDetailsPanel
+                      provider={selectedProvider}
+                      permissions={permissions}
+                      isEditing={isEditingProvider}
+                      setIsEditing={setIsEditingProvider}
+                      onProviderUpdate={handleProviderUpdate}
+                      onProviderDelete={handleProviderDelete}
+                      carsCount={providerCars.length}
+                      lookups={lookups}
+                    />
+                </div>
+                 <div className="h-1/2">
+                    <CarMediaGallery
+                        selectedCar={selectedCar}
+                        providerId={selectedProvider?.id}
+                        onCarUpdate={handleCarUpdateFromGallery}
+                        permissions={permissions}
+                    />
+                </div>
             </div>
 
             {isCarModalOpen && selectedProvider && (
