@@ -613,9 +613,10 @@ export const deleteCarProvider = async (providerId: string): Promise<void> => {
 export const getProviderCars = async (providerId: string): Promise<Car[]> => {
     const snapshot = await carsCollectionRef
         .where('car_provider.car_provider_id', '==', providerId)
-        .orderBy('created_at', 'desc')
         .get();
-    return snapshot.docs.map(docToCar);
+    const cars = snapshot.docs.map(docToCar);
+    // Sort on the client side to avoid needing a composite index
+    return cars.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 };
 
 // --- Car Top-Level Collection Functions ---
