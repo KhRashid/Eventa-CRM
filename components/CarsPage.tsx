@@ -4,6 +4,7 @@ import * as api from '../services/firebaseService';
 import CarProvidersDataTable from './CarProvidersDataTable';
 import CarProviderDetailsPanel from './CarProviderDetailsPanel';
 import ProviderCarsList from './ProviderCarsList';
+import CarFormModal from './CarFormModal';
 
 interface CarsPageProps {
     permissions: Set<string>;
@@ -18,32 +19,29 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     const [loading, setLoading] = useState<boolean>(false);
     const [carsLoading, setCarsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [isEditing, setIsEditing] = useState(false);
+    const [isEditingProvider, setIsEditingProvider] = useState(false);
+
+    // State for Car Modal
+    const [isCarModalOpen, setIsCarModalOpen] = useState(false);
+    const [editingCar, setEditingCar] = useState<Car | null>(null);
+
 
     const handleRowSelect = async (provider: CarProvider) => {
         if (selectedProvider?.id === provider.id) return;
 
         setSelectedProvider(provider);
-        setIsEditing(false);
+        setIsEditingProvider(false);
         setError(null);
         setProviderCars([]);
-
-        // New logic: Check for embedded cars first
-        if (provider.cars && Array.isArray(provider.cars) && provider.cars.length > 0) {
-            setProviderCars(provider.cars);
-            setCarsLoading(false); // No network request needed
-        } else {
-            // Fallback to fetching from subcollection
-            setCarsLoading(true);
-            try {
-                const cars = await api.getProviderCars(provider.id);
-                setProviderCars(cars);
-            } catch (err) {
-                console.error(err);
-                setError('Не удалось загрузить список автомобилей для этого поставщика.');
-            } finally {
-                setCarsLoading(false);
-            }
+        setCarsLoading(true);
+        try {
+            const cars = await api.getProviderCars(provider.id);
+            setProviderCars(cars);
+        } catch (err) {
+            console.error(err);
+            setError('Не удалось загрузить список автомобилей для этого поставщика.');
+        } finally {
+            setCarsLoading(false);
         }
     };
 
@@ -54,7 +52,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
             setCarProviders(prev => [newProvider, ...prev]);
             setSelectedProvider(newProvider);
             setProviderCars([]);
-            setIsEditing(true);
+            setIsEditingProvider(true);
         } catch (err) {
             setError('Не удалось создать нового поставщика.');
             console.error(err);
@@ -66,15 +64,57 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     const handleProviderUpdate = (updatedProvider: CarProvider) => {
         setCarProviders(prev => prev.map(p => p.id === updatedProvider.id ? updatedProvider : p));
         setSelectedProvider(updatedProvider);
-        setIsEditing(false);
+        setIsEditingProvider(false);
     };
 
     const handleProviderDelete = (providerId: string) => {
         setCarProviders(prev => prev.filter(p => p.id !== providerId));
         setSelectedProvider(null);
         setProviderCars([]);
-        setIsEditing(false);
+        setIsEditingProvider(false);
     };
+
+    // --- Car CRUD Handlers ---
+    const handleCarCreate = () => {
+        setEditingCar(null);
+        setIsCarModalOpen(true);
+    };
+    
+    const handleCarUpdate = (car: Car) => {
+        setEditingCar(car);
+        setIsCarModalOpen(true);
+    };
+
+    const handleCarDelete = async (carId: string) => {
+        if (!selectedProvider) return;
+        if (window.confirm('Вы уверены, что хотите удалить этот автомобиль?')) {
+            try {
+                await api.deleteCar(selectedProvider.id, carId);
+                setProviderCars(prev => prev.filter(c => c.id !== carId));
+            } catch (err) {
+                console.error(err);
+                setError('Не удалось удалить автомобиль.');
+            }
+        }
+    };
+
+    const handleSaveCar = async (carData: Omit<Car, 'id'> | Car) => {
+        if (!selectedProvider) return;
+        try {
+            if ('id' in carData) {
+                const updatedCar = await api.updateCar(selectedProvider.id, carData);
+                setProviderCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
+            } else {
+                const newCar = await api.createCar(selectedProvider.id, carData);
+                setProviderCars(prev => [newCar, ...prev]);
+            }
+            setIsCarModalOpen(false);
+        } catch (err) {
+            console.error(err);
+            setError('Не удалось сохранить автомобиль.');
+        }
+    };
+
 
     if (!permissions.has('cars:read')) {
         return <div className="p-4 text-center text-red-500 bg-red-900 bg-opacity-30 rounded-md w-full">У вас нет прав для просмотра этого раздела.</div>;
@@ -101,6 +141,9 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
                     loading={carsLoading}
                     error={error}
                     permissions={permissions}
+                    onCarCreate={handleCarCreate}
+                    onCarUpdate={handleCarUpdate}
+                    onCarDelete={handleCarDelete}
                 />
               </div>
             </div>
@@ -108,14 +151,25 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
                <CarProviderDetailsPanel
                   provider={selectedProvider}
                   permissions={permissions}
-                  isEditing={isEditing}
-                  setIsEditing={setIsEditing}
+                  isEditing={isEditingProvider}
+                  setIsEditing={setIsEditingProvider}
                   onProviderUpdate={handleProviderUpdate}
                   onProviderDelete={handleProviderDelete}
                   carsCount={providerCars.length}
                   lookups={lookups}
                 />
             </div>
+
+            {isCarModalOpen && selectedProvider && (
+                <CarFormModal
+                    isOpen={isCarModalOpen}
+                    onClose={() => setIsCarModalOpen(false)}
+                    onSave={handleSaveCar}
+                    car={editingCar}
+                    providerId={selectedProvider.id}
+                    lookups={lookups}
+                />
+            )}
         </>
     );
 };

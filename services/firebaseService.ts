@@ -503,7 +503,7 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
     for (const key in data) {
         if (data[key] instanceof firebase.firestore.Timestamp) {
             providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
-        } else {
+        } else if (key !== 'cars') { // Explicitly ignore embedded 'cars' array
             providerData[key] = data[key];
         }
     }
@@ -529,12 +529,6 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         providerData.pickup_points = [pickupPointsData];
     } else {
         providerData.pickup_points = [];
-    }
-    
-    // Ensure 'cars' field is an array if it exists
-    if (data.cars && !Array.isArray(data.cars)) {
-        console.warn(`Provider ${docSnap.id} has a 'cars' field that is not an array. Ignoring.`);
-        delete providerData.cars;
     }
 
     return { id: docSnap.id, ...providerData } as CarProvider;
@@ -611,4 +605,32 @@ export const deleteCarProvider = async (providerId: string): Promise<void> => {
 export const getProviderCars = async (providerId: string): Promise<Car[]> => {
     const snapshot = await carProvidersCollectionRef.doc(providerId).collection('cars').orderBy('created_at', 'desc').get();
     return snapshot.docs.map(docToCar);
+};
+
+// --- Car Subcollection Functions ---
+export const createCar = async (providerId: string, carData: Omit<Car, 'id'>): Promise<Car> => {
+    const dataWithTimestamp = {
+        ...carData,
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    const docRef = await carProvidersCollectionRef.doc(providerId).collection('cars').add(dataWithTimestamp);
+    const newDoc = await docRef.get();
+    return docToCar(newDoc);
+};
+
+export const updateCar = async (providerId: string, car: Car): Promise<Car> => {
+    const { id, ...carData } = car;
+    const dataWithTimestamp = {
+        ...carData,
+        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    const carDocRef = carProvidersCollectionRef.doc(providerId).collection('cars').doc(id);
+    await carDocRef.update(dataWithTimestamp);
+    const updatedDoc = await carDocRef.get();
+    return docToCar(updatedDoc);
+};
+
+export const deleteCar = async (providerId: string, carId: string): Promise<void> => {
+    await carProvidersCollectionRef.doc(providerId).collection('cars').doc(carId).delete();
 };
