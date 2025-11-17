@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Car, CarProvider, Lookup } from '../types';
-import { CloseIcon } from '../icons';
+import React, { useState, useEffect, useRef } from 'react';
+import { Car, Lookup } from '../types';
+import { CloseIcon, AddIcon, TrashIcon } from '../icons';
+import * as api from '../services/firebaseService';
 
 interface CarFormModalProps {
     isOpen: boolean;
@@ -23,7 +24,6 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
             brand: '',
             model: '',
             year: new Date().getFullYear(),
-            // FIX: Type '""' is not assignable to type '"economy" | "business" | "premium" | "retro" | "limo" | "minivan" | "bus" | "cabrio"'.
             class: "economy",
             body_type: '',
             color: '',
@@ -49,6 +49,8 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
     };
 
     const [editedCar, setEditedCar] = useState<Car>(getInitialState());
+    const [isUploading, setIsUploading] = useState(false);
+    const photoInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setEditedCar(getInitialState());
@@ -69,22 +71,21 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
         }
 
         if (name.includes('.')) {
-            const [section, key] = name.split('.');
-            if (section === 'pricing' && key === 'price') {
-                 // Deeper nesting for pricing.price
-                 const [priceSection, priceKey] = name.split('.');
+            const path = name.split('.');
+            if (path.length === 3 && path[0] === 'pricing' && path[1] === 'price') {
                  setEditedCar(prev => ({
                     ...prev,
                     pricing: {
                         ...prev.pricing,
                         price: {
                             ...prev.pricing.price,
-                            [priceKey]: finalValue
+                            [path[2]]: finalValue
                         }
                     }
                  }));
 
-            } else {
+            } else if (path.length === 2) {
+                const [section, key] = path;
                 setEditedCar(prev => ({
                     ...prev,
                     [section]: {
@@ -105,6 +106,45 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
         e.preventDefault();
         onSave(editedCar);
     };
+
+    const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !editedCar || !editedCar.id) return;
+
+        setIsUploading(true);
+        try {
+            const downloadURL = await api.uploadCarPhoto(providerId, editedCar.id, file);
+            setEditedCar(prev => {
+                if (!prev) return getInitialState();
+                const updatedPhotos = [...(prev.media.photos || []), downloadURL];
+                return {
+                    ...prev,
+                    media: { ...prev.media, photos: updatedPhotos }
+                };
+            });
+        } catch (error) {
+            console.error("Failed to upload photo", error);
+            alert("Не удалось загрузить фото.");
+        } finally {
+            setIsUploading(false);
+            if (event.target) event.target.value = '';
+        }
+    };
+
+    const handleDeletePhoto = (indexToDelete: number) => {
+        if (!editedCar) return;
+        if (window.confirm("Вы уверены, что хотите удалить это фото?")) {
+            const updatedPhotos = editedCar.media.photos.filter((_, index) => index !== indexToDelete);
+            setEditedCar(prev => {
+                if (!prev) return getInitialState();
+                return {
+                    ...prev,
+                    media: { ...prev.media, photos: updatedPhotos }
+                };
+            });
+        }
+    };
+
 
     if (!isOpen) return null;
 
@@ -145,6 +185,50 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
                                 <InputField label="Мин. время (ч/д)" name="pricing.price.min_time" type="number" value={editedCar.pricing.price?.min_time || 1} onChange={handleChange} />
                                 <InputField label="Доп. час" name="pricing.price.extra_hour_fee" type="number" value={editedCar.pricing.price?.extra_hour_fee || 0} onChange={handleChange} />
                              </div>
+                        </div>
+
+                        <div className="mt-4 border-t border-gray-700 pt-4">
+                            <h4 className="text-lg font-semibold text-blue-400 mb-2">Фотографии</h4>
+                            {car && car.id ? (
+                                <div>
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-3">
+                                        {(editedCar.media.photos || []).map((photo, index) => (
+                                            <div key={photo} className="relative group aspect-w-1 aspect-h-1">
+                                                <img src={photo} alt={`Car photo ${index + 1}`} className="w-full h-full object-cover rounded-md" />
+                                                <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-md">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeletePhoto(index)}
+                                                        className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none"
+                                                    >
+                                                        <TrashIcon />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                         {isUploading && (
+                                            <div className="w-full h-full bg-gray-700 rounded-md flex items-center justify-center aspect-w-1 aspect-h-1">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                   
+                                    <input type="file" ref={photoInputRef} onChange={handlePhotoUpload} accept="image/*" className="hidden" />
+                                    <button
+                                        type="button"
+                                        onClick={() => photoInputRef.current?.click()}
+                                        disabled={isUploading}
+                                        className="w-full flex items-center justify-center space-x-2 py-2 px-4 border-2 border-dashed border-gray-600 rounded-md text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                                    >
+                                        <AddIcon />
+                                        <span>Добавить фото</span>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="text-center py-4 px-2 bg-gray-900 rounded-md">
+                                    <p className="text-sm text-gray-400">Сохраните автомобиль, чтобы добавить фотографии.</p>
+                                </div>
+                            )}
                         </div>
 
                     </div>

@@ -634,3 +634,11 @@ export const updateCar = async (providerId: string, car: Car): Promise<Car> => {
 export const deleteCar = async (providerId: string, carId: string): Promise<void> => {
     await carProvidersCollectionRef.doc(providerId).collection('cars').doc(carId).delete();
 };
+
+export const uploadCarPhoto = async (providerId: string, carId: string, file: File): Promise<string> => {
+    const fileName = `${new Date().getTime()}_${file.name}`;
+    const storageRef = storage.ref(`car_providers/${providerId}/cars/${carId}/${fileName}`);
+    const uploadTask = await storageRef.put(file);
+    const downloadURL = await uploadTask.ref.getDownloadURL();
+    return downloadURL;
+};

@@ -148,7 +148,7 @@ const MenuBuilderPage: React.FC<MenuBuilderPageProps> = ({ permissions, menuItem
                     {canCreatePackages && <button onClick={() => { setCurrentPackage(null); setIsPackageModalOpen(true); }} className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md"><AddIcon /><span>Создать пакет</span></button>}
                 </div>
                  <div className="space-y-4">
-                     {/* FIX: Explicitly type `pkg` to `MenuPackage` to resolve type inference error. */}
+                     {/* FIX: Explicitly type `pkg` as `MenuPackage` to resolve type inference error. */}
                      {menuPackages.map((pkg: MenuPackage) => (
                          <div key={pkg.id} className="bg-gray-900 p-4 rounded-md group">
                              <div className="flex justify-between items-center">

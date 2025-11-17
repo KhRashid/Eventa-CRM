@@ -14,7 +14,7 @@ interface ProviderCarsListProps {
 }
 
 const CarCard: React.FC<{ car: Car; onUpdate: () => void; onDelete: () => void; canUpdate: boolean; canDelete: boolean; }> = ({ car, onUpdate, onDelete, canUpdate, canDelete }) => {
-    const mainPhoto = car.media.photos[0] || 'https://via.placeholder.com/300x200?text=No+Image';
+    const mainPhoto = car.media?.photos?.[0] || 'https://via.placeholder.com/300x200?text=No+Image';
 
     return (
         <div className="bg-gray-900 rounded-lg shadow-md overflow-hidden flex flex-col md:flex-row group relative">
