@@ -112,11 +112,13 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
             if ('id' in carData) {
                 const updatedCar = await api.updateCar(selectedProvider.id, carData);
                 setProviderCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
+                // Don't close modal when updating - allows adding photos
             } else {
                 const newCar = await api.createCar(selectedProvider.id, carData);
                 setProviderCars(prev => [newCar, ...prev]);
+                // Update modal to edit mode so user can add photos
+                setSelectedCar(newCar);
             }
-            setIsCarModalOpen(false);
         } catch (err) {
             console.error(err);
             setError('Не удалось сохранить автомобиль.');

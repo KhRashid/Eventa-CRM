@@ -114,16 +114,23 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
         setIsUploading(true);
         try {
             const downloadURL = await api.uploadCarPhoto(providerId, editedCar.id, file);
-            setEditedCar(prev => {
-                if (!prev) return getInitialState();
-                const currentMedia = prev.media || { photos: [] };
-                const currentPhotos = currentMedia.photos || [];
-                const updatedPhotos = [...currentPhotos, downloadURL];
-                return {
-                    ...prev,
-                    media: { ...currentMedia, photos: updatedPhotos }
-                };
-            });
+            const currentMedia = editedCar.media || { photos: [] };
+            const currentPhotos = currentMedia.photos || [];
+            const updatedPhotos = [...currentPhotos, downloadURL];
+            
+            const updatedCar = {
+                ...editedCar,
+                media: { ...currentMedia, photos: updatedPhotos }
+            };
+            
+            // Update in Firestore immediately
+            await api.updateCar(providerId, updatedCar);
+            
+            // Update local state
+            setEditedCar(updatedCar);
+            
+            // Notify parent to refresh data
+            onSave(updatedCar);
         } catch (error) {
             console.error("Failed to upload photo", error);
             alert("Не удалось загрузить фото.");
@@ -133,18 +140,30 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
         }
     };
 
-    const handleDeletePhoto = (indexToDelete: number) => {
-        if (!editedCar) return;
+    const handleDeletePhoto = async (indexToDelete: number) => {
+        if (!editedCar || !editedCar.id) return;
         if (window.confirm("Вы уверены, что хотите удалить это фото?")) {
-            setEditedCar(prev => {
-                if (!prev) return getInitialState();
-                const currentPhotos = prev.media?.photos || [];
+            try {
+                const currentPhotos = editedCar.media?.photos || [];
                 const updatedPhotos = currentPhotos.filter((_, index) => index !== indexToDelete);
-                return {
-                    ...prev,
-                    media: { ...prev.media, photos: updatedPhotos }
+                
+                const updatedCar = {
+                    ...editedCar,
+                    media: { ...editedCar.media, photos: updatedPhotos }
                 };
-            });
+                
+                // Update in Firestore immediately
+                await api.updateCar(providerId, updatedCar);
+                
+                // Update local state
+                setEditedCar(updatedCar);
+                
+                // Notify parent to refresh data
+                onSave(updatedCar);
+            } catch (error) {
+                console.error("Failed to delete photo", error);
+                alert("Не удалось удалить фото.");
+            }
         }
     };
 
