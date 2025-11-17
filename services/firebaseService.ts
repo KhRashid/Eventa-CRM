@@ -529,9 +529,19 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
     } else {
         providerData.pickup_points = [];
     }
-
-    // This field will be populated by a separate query, so we don't read it from the provider doc
-    delete providerData.cars;
+    
+    // Check for and process embedded cars array
+    if (data.cars && Array.isArray(data.cars)) {
+        providerData.cars = data.cars.map((carData: any, index: number) => {
+            // This is a simplified conversion, assuming embedded data matches the 'Car' type structure
+            // It might need more robust parsing if the structure varies
+            return {
+                id: carData.id || `${docSnap.id}_${index}`, // Create a pseudo-ID
+                ...carData,
+                 media: carData.media || { photos: [] },
+            } as Car;
+        });
+    }
 
     return { id: docSnap.id, ...providerData } as CarProvider;
 };

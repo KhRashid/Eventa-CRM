@@ -37,15 +37,21 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         setProviderCars([]);
         setSelectedCar(null); // Deselect car when provider changes
         
-        setCarsLoading(true);
-        try {
-            const cars = await api.getProviderCars(provider.id);
-            setProviderCars(cars);
-        } catch (err) {
-            console.error(err);
-            setError('Не удалось загрузить список автомобилей для этого поставщика.');
-        } finally {
+        // New flexible logic: Check for embedded cars first.
+        if (provider.cars && provider.cars.length > 0) {
+            setProviderCars(provider.cars);
             setCarsLoading(false);
+        } else {
+            setCarsLoading(true);
+            try {
+                const cars = await api.getProviderCars(provider.id);
+                setProviderCars(cars);
+            } catch (err) {
+                console.error(err);
+                setError('Не удалось загрузить список автомобилей для этого поставщика.');
+            } finally {
+                setCarsLoading(false);
+            }
         }
     };
 
