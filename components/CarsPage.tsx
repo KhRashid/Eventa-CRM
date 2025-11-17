@@ -33,15 +33,23 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         setIsEditingProvider(false);
         setError(null);
         setProviderCars([]);
-        setCarsLoading(true);
-        try {
-            const cars = await api.getProviderCars(provider.id);
-            setProviderCars(cars);
-        } catch (err) {
-            console.error(err);
-            setError('Не удалось загрузить список автомобилей для этого поставщика.');
-        } finally {
-            setCarsLoading(false);
+
+        // Flexible car data loading
+        if (provider.cars && provider.cars.length > 0) {
+            // If cars are embedded in the provider document, use them directly.
+            setProviderCars(provider.cars);
+        } else {
+            // Otherwise, fetch from the 'cars' subcollection.
+            setCarsLoading(true);
+            try {
+                const cars = await api.getProviderCars(provider.id);
+                setProviderCars(cars);
+            } catch (err) {
+                console.error(err);
+                setError('Не удалось загрузить список автомобилей для этого поставщика.');
+            } finally {
+                setCarsLoading(false);
+            }
         }
     };
 

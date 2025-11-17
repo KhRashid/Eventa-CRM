@@ -499,16 +499,16 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
     if (!data) throw new Error(`Document data not found for doc id: ${docSnap.id}`);
 
     const providerData: any = {};
-    // First, copy all data, converting timestamps
+    // First, copy all data, converting timestamps and including embedded 'cars' array if it exists.
     for (const key in data) {
         if (data[key] instanceof firebase.firestore.Timestamp) {
             providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
-        } else if (key !== 'cars') { // Explicitly ignore embedded 'cars' array
+        } else {
             providerData[key] = data[key];
         }
     }
 
-    // Now, normalize specific fields
+    // Now, normalize specific fields for consistency
     if (data.messengers && typeof data.messengers === 'object') {
         const normalizedMessengers: { whatsapp?: string, telegram?: string } = {};
         for (const key in data.messengers) {
