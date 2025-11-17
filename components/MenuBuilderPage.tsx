@@ -115,7 +115,8 @@ const MenuBuilderPage: React.FC<MenuBuilderPageProps> = ({ permissions, menuItem
                     {canCreateCatalog && <button onClick={() => { setCurrentItem(null); setIsItemModalOpen(true); }} className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md"><AddIcon /><span>Добавить</span></button>}
                 </div>
                 <div className="space-y-6">
-                    {Object.entries(groupedMenuItems).sort(([catA], [catB]) => catA.localeCompare(catB)).map(([category, items]) => (
+                    {/* FIX: Explicitly type `items` as `MenuItem[]` to fix type inference issue. */}
+                    {Object.entries(groupedMenuItems).sort(([catA], [catB]) => catA.localeCompare(catB)).map(([category, items]: [string, MenuItem[]]) => (
                         <div key={category}>
                             <h3 className="text-xl font-semibold text-blue-400 border-b border-gray-700 pb-2 mb-3">{category}</h3>
                             <ul className="space-y-2">
@@ -148,7 +149,6 @@ const MenuBuilderPage: React.FC<MenuBuilderPageProps> = ({ permissions, menuItem
                     {canCreatePackages && <button onClick={() => { setCurrentPackage(null); setIsPackageModalOpen(true); }} className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md"><AddIcon /><span>Создать пакет</span></button>}
                 </div>
                  <div className="space-y-4">
-                     {/* FIX: Explicitly type `pkg` as `MenuPackage` to resolve type inference error. */}
                      {menuPackages.map((pkg: MenuPackage) => (
                          <div key={pkg.id} className="bg-gray-900 p-4 rounded-md group">
                              <div className="flex justify-between items-center">
@@ -162,7 +162,7 @@ const MenuBuilderPage: React.FC<MenuBuilderPageProps> = ({ permissions, menuItem
                                 </div>
                              </div>
                              <ul className="list-disc list-inside text-sm text-gray-300 mt-2 pl-2 columns-2 md:columns-3">
-                                {pkg.itemIds.map(id => {
+                                {(pkg.itemIds || []).map(id => {
                                     const item = menuItems.find(i => i.id === id);
                                     return item ? <li key={id}>{item.name}</li> : null;
                                 })}

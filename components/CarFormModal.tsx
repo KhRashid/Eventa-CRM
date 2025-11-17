@@ -116,10 +116,12 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
             const downloadURL = await api.uploadCarPhoto(providerId, editedCar.id, file);
             setEditedCar(prev => {
                 if (!prev) return getInitialState();
-                const updatedPhotos = [...(prev.media.photos || []), downloadURL];
+                const currentMedia = prev.media || { photos: [] };
+                const currentPhotos = currentMedia.photos || [];
+                const updatedPhotos = [...currentPhotos, downloadURL];
                 return {
                     ...prev,
-                    media: { ...prev.media, photos: updatedPhotos }
+                    media: { ...currentMedia, photos: updatedPhotos }
                 };
             });
         } catch (error) {
@@ -134,9 +136,10 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
     const handleDeletePhoto = (indexToDelete: number) => {
         if (!editedCar) return;
         if (window.confirm("Вы уверены, что хотите удалить это фото?")) {
-            const updatedPhotos = editedCar.media.photos.filter((_, index) => index !== indexToDelete);
             setEditedCar(prev => {
                 if (!prev) return getInitialState();
+                const currentPhotos = prev.media?.photos || [];
+                const updatedPhotos = currentPhotos.filter((_, index) => index !== indexToDelete);
                 return {
                     ...prev,
                     media: { ...prev.media, photos: updatedPhotos }
@@ -192,7 +195,7 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
                             {car && car.id ? (
                                 <div>
                                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-3">
-                                        {(editedCar.media.photos || []).map((photo, index) => (
+                                        {(editedCar.media?.photos || []).map((photo, index) => (
                                             <div key={photo} className="relative group aspect-w-1 aspect-h-1">
                                                 <img src={photo} alt={`Car photo ${index + 1}`} className="w-full h-full object-cover rounded-md" />
                                                 <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-md">

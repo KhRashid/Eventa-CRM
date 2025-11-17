@@ -538,6 +538,7 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
 const docToCar = (docSnap: firebase.firestore.DocumentSnapshot): Car => {
     const data = docSnap.data();
     if (!data) throw new Error(`Document data not found for doc id: ${docSnap.id}`);
+    
     const carData: any = {};
     for (const key in data) {
         if (data[key] instanceof firebase.firestore.Timestamp) {
@@ -546,6 +547,14 @@ const docToCar = (docSnap: firebase.firestore.DocumentSnapshot): Car => {
             carData[key] = data[key];
         }
     }
+
+    // Ensure media object and photos array exist for robustness
+    if (!carData.media) {
+        carData.media = { photos: [] };
+    } else if (!carData.media.photos) {
+        carData.media.photos = [];
+    }
+
     return { id: docSnap.id, ...carData } as Car;
 };
 
