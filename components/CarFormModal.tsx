@@ -23,6 +23,7 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
             brand: '',
             model: '',
             year: new Date().getFullYear(),
+            // FIX: Type '""' is not assignable to type '"economy" | "business" | "premium" | "retro" | "limo" | "minivan" | "bus" | "cabrio"'.
             class: "economy",
             body_type: '',
             color: '',
@@ -53,6 +54,8 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
         setEditedCar(getInitialState());
     }, [car, isOpen]);
     
+    const carBrandLookup = lookups.find(l => l.key === 'car_brands');
+    const carModelLookup = lookups.find(l => l.key === 'car_models');
     const carClassLookup = lookups.find(l => l.key === 'car_classes');
     const bodyTypeLookup = lookups.find(l => l.key === 'car_body_types');
     const colorLookup = lookups.find(l => l.key === 'car_colors');
@@ -115,8 +118,8 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
                 <form onSubmit={handleSubmit}>
                     <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <InputField label="Марка" name="brand" value={editedCar.brand} onChange={handleChange} required />
-                            <InputField label="Модель" name="model" value={editedCar.model} onChange={handleChange} required />
+                            <SelectField label="Марка" name="brand" value={editedCar.brand} onChange={handleChange} options={carBrandLookup?.values || []} />
+                            <SelectField label="Модель" name="model" value={editedCar.model} onChange={handleChange} options={carModelLookup?.values || []} />
                         </div>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <InputField label="Год" name="year" type="number" value={editedCar.year} onChange={handleChange} required />
