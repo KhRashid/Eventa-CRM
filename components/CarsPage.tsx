@@ -27,33 +27,32 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     const [editingCar, setEditingCar] = useState<Car | null>(null);
     const [selectedCar, setSelectedCar] = useState<Car | null>(null);
 
+    // Helper function to sync all relevant states after a car is modified
+    const updateStateAfterCarChange = (newCarsList: Car[]) => {
+        if (!selectedProvider) return;
+        
+        // Update the local list of cars for the selected provider
+        setProviderCars(newCarsList);
+        
+        // Create the updated provider object with the new cars list
+        const updatedProvider = { ...selectedProvider, cars: newCarsList };
+        
+        // Update the main list of all providers in App.tsx
+        setCarProviders(prev => prev.map(p => p.id === updatedProvider.id ? updatedProvider : p));
+        
+        // Update the currently selected provider object to keep it in sync
+        setSelectedProvider(updatedProvider);
+    };
 
-    const handleRowSelect = async (provider: CarProvider) => {
+
+    const handleRowSelect = (provider: CarProvider) => {
         if (selectedProvider?.id === provider.id) return;
 
         setSelectedProvider(provider);
         setIsEditingProvider(false);
         setError(null);
-        setProviderCars([]);
+        setProviderCars(provider.cars || []);
         setSelectedCar(null); // Deselect car when provider changes
-        
-        setCarsLoading(true);
-        try {
-            // Always fetch from the primary 'cars' collection
-            const carsFromCollection = await api.getProviderCars(provider.id);
-
-            // Also get legacy embedded cars, if any
-            const embeddedCars = provider.cars || [];
-            
-            // Combine the lists to ensure newly created cars are always shown alongside legacy ones.
-            setProviderCars([...carsFromCollection, ...embeddedCars]);
-
-        } catch (err) {
-            console.error(err);
-            setError('Не удалось загрузить список автомобилей для этого поставщика.');
-        } finally {
-            setCarsLoading(false);
-        }
     };
 
     const handleProviderCreate = async () => {
@@ -102,8 +101,10 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         if (!selectedProvider) return;
         if (window.confirm('Вы уверены, что хотите удалить этот автомобиль?')) {
             try {
-                await api.deleteCar(carId);
-                setProviderCars(prev => prev.filter(c => c.id !== carId));
+                await api.deleteCar(selectedProvider.id, carId);
+                const newCarsList = providerCars.filter(c => c.id !== carId);
+                updateStateAfterCarChange(newCarsList);
+
                 if (selectedCar?.id === carId) {
                     setSelectedCar(null);
                 }
@@ -117,16 +118,18 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     const handleSaveCar = async (carData: Omit<Car, 'id'> | Car) => {
         if (!selectedProvider) return;
         try {
-            if ('id' in carData && carData.id && !carData.id.startsWith('embedded_')) {
-                const updatedCar = await api.updateCar(carData);
-                setProviderCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
+            if ('id' in carData && carData.id) {
+                const updatedCar = await api.updateCar(selectedProvider.id, carData as Car);
+                const newCarsList = providerCars.map(c => c.id === updatedCar.id ? updatedCar : c);
+                updateStateAfterCarChange(newCarsList);
                 if (selectedCar?.id === updatedCar.id) {
                     setSelectedCar(updatedCar);
                 }
             } else {
                 const { id, ...dataForCreation } = carData as Car;
                 const newCar = await api.createCar(selectedProvider.id, selectedProvider.name, dataForCreation);
-                setProviderCars(prev => [newCar, ...prev]);
+                const newCarsList = [newCar, ...providerCars];
+                updateStateAfterCarChange(newCarsList);
             }
             setIsCarModalOpen(false);
             setEditingCar(null);
@@ -137,7 +140,8 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     };
 
     const handleCarUpdateFromGallery = (updatedCar: Car) => {
-        setProviderCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
+        const newCarsList = providerCars.map(c => c.id === updatedCar.id ? updatedCar : c);
+        updateStateAfterCarChange(newCarsList);
         setSelectedCar(updatedCar);
     };
 
