@@ -508,10 +508,6 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         }
     }
     
-    // This part is removed to enforce a single data model.
-    // The 'cars' array will no longer be read from the provider document.
-    delete providerData.cars;
-
     if (data.messengers && typeof data.messengers === 'object') {
         const normalizedMessengers: { whatsapp?: string, telegram?: string } = {};
         for (const key in data.messengers) {
@@ -532,6 +528,14 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         providerData.pickup_points = [pickupPointsData];
     } else {
         providerData.pickup_points = [];
+    }
+    
+    // Process embedded cars array if it exists
+    if (data.cars && Array.isArray(data.cars)) {
+        providerData.cars = data.cars.map((car: Omit<Car, 'id'>, index: number) => ({
+            ...car,
+            id: `embedded_${docSnap.id}_${index}` // Assign a temporary, unique ID
+        }));
     }
 
     return { id: docSnap.id, ...providerData } as CarProvider;
