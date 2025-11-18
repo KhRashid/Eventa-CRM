@@ -36,6 +36,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         setError(null);
         setProviderCars([]);
         setSelectedCar(null); // Deselect car when provider changes
+        
         setCarsLoading(true);
         try {
             const cars = await api.getProviderCars(provider.id);
@@ -109,14 +110,16 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     const handleSaveCar = async (carData: Omit<Car, 'id'> | Car) => {
         if (!selectedProvider) return;
         try {
+            // FIX: Use a type guard ('in' operator) to safely check for the 'id' property.
+            // This resolves the TypeScript error by correctly narrowing the type of `carData`.
             if ('id' in carData && carData.id) {
-                const updatedCar = await api.updateCar(carData);
+                const updatedCar = await api.updateCar(carData as Car);
                 setProviderCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
                 if (selectedCar?.id === updatedCar.id) {
                     setSelectedCar(updatedCar);
                 }
             } else {
-                const newCar = await api.createCar(selectedProvider.id, selectedProvider.name, carData);
+                const newCar = await api.createCar(selectedProvider.id, selectedProvider.name, carData as Omit<Car, 'id'>);
                 setProviderCars(prev => [newCar, ...prev]);
             }
             setIsCarModalOpen(false);

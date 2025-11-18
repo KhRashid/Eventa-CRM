@@ -500,14 +500,11 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
     if (!data) throw new Error(`Document data not found for doc id: ${docSnap.id}`);
 
     const providerData: any = {};
-    // Exclude 'cars' field from top-level processing
-    const { cars, ...restOfData } = data;
-
-    for (const key in restOfData) {
-        if (restOfData[key] instanceof firebase.firestore.Timestamp) {
-            providerData[key] = (restOfData[key] as firebase.firestore.Timestamp).toDate().toISOString();
-        } else {
-            providerData[key] = restOfData[key];
+    for (const key in data) {
+        if (data[key] instanceof firebase.firestore.Timestamp) {
+            providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
+        } else if (key !== 'cars') { // Ignore embedded cars array
+            providerData[key] = data[key];
         }
     }
     
@@ -532,7 +529,7 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
     } else {
         providerData.pickup_points = [];
     }
-    
+
     return { id: docSnap.id, ...providerData } as CarProvider;
 };
 
@@ -613,11 +610,10 @@ export const deleteCarProvider = async (providerId: string): Promise<void> => {
 export const getProviderCars = async (providerId: string): Promise<Car[]> => {
     const snapshot = await carsCollectionRef
         .where('car_provider.car_provider_id', '==', providerId)
+        .orderBy('created_at', 'desc')
         .get();
-    
     const cars = snapshot.docs.map(docToCar);
-    // Client-side sorting
-    return cars.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return cars;
 };
 
 // --- Car Top-Level Collection Functions ---
