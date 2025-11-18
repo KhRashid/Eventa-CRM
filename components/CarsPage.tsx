@@ -27,32 +27,25 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     const [editingCar, setEditingCar] = useState<Car | null>(null);
     const [selectedCar, setSelectedCar] = useState<Car | null>(null);
 
-    // Helper function to sync all relevant states after a car is modified
-    const updateStateAfterCarChange = (newCarsList: Car[]) => {
-        if (!selectedProvider) return;
-        
-        // Update the local list of cars for the selected provider
-        setProviderCars(newCarsList);
-        
-        // Create the updated provider object with the new cars list
-        const updatedProvider = { ...selectedProvider, cars: newCarsList };
-        
-        // Update the main list of all providers in App.tsx
-        setCarProviders(prev => prev.map(p => p.id === updatedProvider.id ? updatedProvider : p));
-        
-        // Update the currently selected provider object to keep it in sync
-        setSelectedProvider(updatedProvider);
-    };
 
-
-    const handleRowSelect = (provider: CarProvider) => {
+    const handleRowSelect = async (provider: CarProvider) => {
         if (selectedProvider?.id === provider.id) return;
 
         setSelectedProvider(provider);
         setIsEditingProvider(false);
         setError(null);
-        setProviderCars(provider.cars || []);
+        setProviderCars([]);
         setSelectedCar(null); // Deselect car when provider changes
+        setCarsLoading(true);
+        try {
+            const cars = await api.getProviderCars(provider.id);
+            setProviderCars(cars);
+        } catch (err) {
+            console.error(err);
+            setError('Не удалось загрузить список автомобилей для этого поставщика.');
+        } finally {
+            setCarsLoading(false);
+        }
     };
 
     const handleProviderCreate = async () => {
@@ -101,10 +94,8 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         if (!selectedProvider) return;
         if (window.confirm('Вы уверены, что хотите удалить этот автомобиль?')) {
             try {
-                await api.deleteCar(selectedProvider.id, carId);
-                const newCarsList = providerCars.filter(c => c.id !== carId);
-                updateStateAfterCarChange(newCarsList);
-
+                await api.deleteCar(carId);
+                setProviderCars(prev => prev.filter(c => c.id !== carId));
                 if (selectedCar?.id === carId) {
                     setSelectedCar(null);
                 }
@@ -119,17 +110,14 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         if (!selectedProvider) return;
         try {
             if ('id' in carData && carData.id) {
-                const updatedCar = await api.updateCar(selectedProvider.id, carData as Car);
-                const newCarsList = providerCars.map(c => c.id === updatedCar.id ? updatedCar : c);
-                updateStateAfterCarChange(newCarsList);
+                const updatedCar = await api.updateCar(carData);
+                setProviderCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
                 if (selectedCar?.id === updatedCar.id) {
                     setSelectedCar(updatedCar);
                 }
             } else {
-                const { id, ...dataForCreation } = carData as Car;
-                const newCar = await api.createCar(selectedProvider.id, selectedProvider.name, dataForCreation);
-                const newCarsList = [newCar, ...providerCars];
-                updateStateAfterCarChange(newCarsList);
+                const newCar = await api.createCar(selectedProvider.id, selectedProvider.name, carData);
+                setProviderCars(prev => [newCar, ...prev]);
             }
             setIsCarModalOpen(false);
             setEditingCar(null);
@@ -140,8 +128,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     };
 
     const handleCarUpdateFromGallery = (updatedCar: Car) => {
-        const newCarsList = providerCars.map(c => c.id === updatedCar.id ? updatedCar : c);
-        updateStateAfterCarChange(newCarsList);
+        setProviderCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
         setSelectedCar(updatedCar);
     };
 
