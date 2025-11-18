@@ -503,7 +503,7 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
     for (const key in data) {
         if (data[key] instanceof firebase.firestore.Timestamp) {
             providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
-        } else if (key !== 'cars') { // Standardize: IGNORE embedded cars array
+        } else {
              providerData[key] = data[key];
         }
     }
