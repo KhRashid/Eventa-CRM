@@ -35,16 +35,23 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         setIsEditingProvider(false);
         setError(null);
         setProviderCars([]);
-        setSelectedCar(null);
-        setCarsLoading(true);
-        try {
-            const cars = await api.getProviderCars(provider.id);
-            setProviderCars(cars);
-        } catch (err) {
-            console.error(err);
-            setError('Не удалось загрузить список автомобилей для этого поставщика.');
-        } finally {
+        setSelectedCar(null); // Deselect car when provider changes
+        
+        // New flexible logic: Check for embedded cars first.
+        if (provider.cars && provider.cars.length > 0) {
+            setProviderCars(provider.cars);
             setCarsLoading(false);
+        } else {
+            setCarsLoading(true);
+            try {
+                const cars = await api.getProviderCars(provider.id);
+                setProviderCars(cars);
+            } catch (err) {
+                console.error(err);
+                setError('Не удалось загрузить список автомобилей для этого поставщика.');
+            } finally {
+                setCarsLoading(false);
+            }
         }
     };
 
@@ -91,6 +98,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     };
 
     const handleCarDelete = async (carId: string) => {
+        if (!selectedProvider) return;
         if (window.confirm('Вы уверены, что хотите удалить этот автомобиль?')) {
             try {
                 await api.deleteCar(carId);
@@ -182,6 +190,7 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
                  <div className="h-2/5">
                     <CarMediaGallery
                         selectedCar={selectedCar}
+                        providerId={selectedProvider?.id}
                         onCarUpdate={handleCarUpdateFromGallery}
                         permissions={permissions}
                     />
