@@ -507,6 +507,10 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
             providerData[key] = data[key];
         }
     }
+    
+    // This part is removed to enforce a single data model.
+    // The 'cars' array will no longer be read from the provider document.
+    delete providerData.cars;
 
     if (data.messengers && typeof data.messengers === 'object') {
         const normalizedMessengers: { whatsapp?: string, telegram?: string } = {};
@@ -528,19 +532,6 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         providerData.pickup_points = [pickupPointsData];
     } else {
         providerData.pickup_points = [];
-    }
-    
-    // Check for and process embedded cars array
-    if (data.cars && Array.isArray(data.cars)) {
-        providerData.cars = data.cars.map((carData: any, index: number) => {
-            // This is a simplified conversion, assuming embedded data matches the 'Car' type structure
-            // It might need more robust parsing if the structure varies
-            return {
-                id: carData.id || `${docSnap.id}_${index}`, // Create a pseudo-ID
-                ...carData,
-                 media: carData.media || { photos: [] },
-            } as Car;
-        });
     }
 
     return { id: docSnap.id, ...providerData } as CarProvider;
@@ -623,10 +614,10 @@ export const deleteCarProvider = async (providerId: string): Promise<void> => {
 export const getProviderCars = async (providerId: string): Promise<Car[]> => {
     const snapshot = await carsCollectionRef
         .where('car_provider.car_provider_id', '==', providerId)
+        .orderBy('created_at', 'desc')
         .get();
     const cars = snapshot.docs.map(docToCar);
-    // Sort on the client side to avoid needing a composite index
-    return cars.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return cars;
 };
 
 // --- Car Top-Level Collection Functions ---
