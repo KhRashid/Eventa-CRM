@@ -61,12 +61,23 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const menuItemsMap = new Map(allMenuItems.map(item => [item.id, item]));
 
-  const venueLookups = lookups.filter(lookup => 
-    !lookup.key.startsWith('car_') && 
-    !lookup.key.startsWith('singer_') &&
-    lookup.key !== 'city_codes' &&
-    lookup.key !== 'menu_item_categories'
-  );
+  const venueLookups = lookups.filter(lookup => {
+    const key = lookup.key;
+    const irrelevantPrefixes = ['car_', 'singer_', 'song_'];
+    const irrelevantKeys = ['menu_item_categories', 'city_codes'];
+
+    if (irrelevantKeys.includes(key)) {
+        return false;
+    }
+
+    for (const prefix of irrelevantPrefixes) {
+        if (key.startsWith(prefix)) {
+            return false;
+        }
+    }
+
+    return true;
+  });
 
   useEffect(() => {
     setEditedVenue(venue);
