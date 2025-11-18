@@ -503,7 +503,7 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
     for (const key in data) {
         if (data[key] instanceof firebase.firestore.Timestamp) {
             providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
-        } else {
+        } else if (key !== 'cars') { // Ignore embedded cars array
             providerData[key] = data[key];
         }
     }
@@ -528,14 +528,6 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         providerData.pickup_points = [pickupPointsData];
     } else {
         providerData.pickup_points = [];
-    }
-    
-    // Process embedded cars array if it exists
-    if (data.cars && Array.isArray(data.cars)) {
-        providerData.cars = data.cars.map((car: Omit<Car, 'id'>, index: number) => ({
-            ...car,
-            id: `embedded_${docSnap.id}_${index}` // Assign a temporary, unique ID
-        }));
     }
 
     return { id: docSnap.id, ...providerData } as CarProvider;
@@ -593,7 +585,7 @@ export const createCarProvider = async (): Promise<CarProvider> => {
 };
 
 export const updateCarProvider = async (provider: CarProvider): Promise<CarProvider> => {
-    const { id, cars, ...providerData } = provider;
+    const { id, ...providerData } = provider;
     const providerDocRef = carProvidersCollectionRef.doc(id);
 
     const dataToUpdate: any = {

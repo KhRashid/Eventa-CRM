@@ -230,5 +230,4 @@ export interface CarProvider {
     city_code: string;
     created_at: string;
     updated_at: string;
-    cars?: Car[]; // To hold subcollection data after fetch
 }
