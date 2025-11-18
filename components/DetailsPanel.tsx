@@ -61,6 +61,13 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const menuItemsMap = new Map(allMenuItems.map(item => [item.id, item]));
 
+  const venueLookups = lookups.filter(lookup => 
+    !lookup.key.startsWith('car_') && 
+    !lookup.key.startsWith('singer_') &&
+    lookup.key !== 'city_codes' &&
+    lookup.key !== 'menu_item_categories'
+  );
+
   useEffect(() => {
     setEditedVenue(venue);
   }, [venue]);
@@ -210,7 +217,7 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
                         )}
                     </div>
                     
-                    {lookups.map(lookup => (
+                    {venueLookups.map(lookup => (
                       <div className="py-3" key={lookup.id}>
                         <dt className="text-sm font-medium text-gray-400 mb-2">{lookup.name}</dt>
                         <div>{(venue.customFields?.[lookup.key] || []).map(val => <Tag key={val} text={val} />)}</div>
@@ -260,7 +267,7 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
                            </button>
                         </div>
 
-                        {lookups.map(lookup => (
+                        {venueLookups.map(lookup => (
                              <div className="py-2 sm:grid sm:grid-cols-3 sm:gap-4" key={lookup.id}>
                                  <label className="block text-sm font-medium text-gray-400 sm:pt-2">{lookup.name}</label>
                                  <div className="mt-1 sm:mt-0 sm:col-span-2">
