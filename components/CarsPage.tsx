@@ -36,22 +36,15 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         setError(null);
         setProviderCars([]);
         setSelectedCar(null); // Deselect car when provider changes
-        
-        // Hybrid logic: check for embedded cars first
-        if (provider.cars && provider.cars.length > 0) {
-            setProviderCars(provider.cars);
+        setCarsLoading(true);
+        try {
+            const cars = await api.getProviderCars(provider.id);
+            setProviderCars(cars);
+        } catch (err) {
+            console.error(err);
+            setError('Не удалось загрузить список автомобилей для этого поставщика.');
+        } finally {
             setCarsLoading(false);
-        } else {
-            setCarsLoading(true);
-            try {
-                const cars = await api.getProviderCars(provider.id);
-                setProviderCars(cars);
-            } catch (err) {
-                console.error(err);
-                setError('Не удалось загрузить список автомобилей для этого поставщика.');
-            } finally {
-                setCarsLoading(false);
-            }
         }
     };
 
@@ -116,15 +109,14 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
     const handleSaveCar = async (carData: Omit<Car, 'id'> | Car) => {
         if (!selectedProvider) return;
         try {
-            if ('id' in carData && carData.id && !carData.id.startsWith('embedded_')) {
+            if ('id' in carData && carData.id) {
                 const updatedCar = await api.updateCar(carData);
                 setProviderCars(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
                 if (selectedCar?.id === updatedCar.id) {
                     setSelectedCar(updatedCar);
                 }
             } else {
-                const { id, ...dataForCreation } = carData as Car;
-                const newCar = await api.createCar(selectedProvider.id, selectedProvider.name, dataForCreation);
+                const newCar = await api.createCar(selectedProvider.id, selectedProvider.name, carData);
                 setProviderCars(prev => [newCar, ...prev]);
             }
             setIsCarModalOpen(false);
