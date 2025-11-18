@@ -504,7 +504,7 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         if (data[key] instanceof firebase.firestore.Timestamp) {
             providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
         } else {
-             providerData[key] = data[key];
+            providerData[key] = data[key];
         }
     }
     
@@ -528,6 +528,14 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         providerData.pickup_points = [pickupPointsData];
     } else {
         providerData.pickup_points = [];
+    }
+    
+    // Process embedded cars array if it exists
+    if (data.cars && Array.isArray(data.cars)) {
+        providerData.cars = data.cars.map((car: Omit<Car, 'id'>, index: number) => ({
+            ...car,
+            id: `embedded_${docSnap.id}_${index}` // Assign a temporary, unique ID
+        }));
     }
 
     return { id: docSnap.id, ...providerData } as CarProvider;
@@ -585,7 +593,7 @@ export const createCarProvider = async (): Promise<CarProvider> => {
 };
 
 export const updateCarProvider = async (provider: CarProvider): Promise<CarProvider> => {
-    const { id, ...providerData } = provider;
+    const { id, cars, ...providerData } = provider;
     const providerDocRef = carProvidersCollectionRef.doc(id);
 
     const dataToUpdate: any = {
@@ -610,10 +618,10 @@ export const deleteCarProvider = async (providerId: string): Promise<void> => {
 export const getProviderCars = async (providerId: string): Promise<Car[]> => {
     const snapshot = await carsCollectionRef
         .where('car_provider.car_provider_id', '==', providerId)
+        .orderBy('created_at', 'desc')
         .get();
     const cars = snapshot.docs.map(docToCar);
-    // Client-side sorting
-    return cars.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return cars;
 };
 
 // --- Car Top-Level Collection Functions ---
