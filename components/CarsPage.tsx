@@ -37,21 +37,22 @@ const CarsPage: React.FC<CarsPageProps> = ({ permissions, carProviders, setCarPr
         setProviderCars([]);
         setSelectedCar(null); // Deselect car when provider changes
         
-        // Hybrid logic: check for embedded cars first
-        if (provider.cars && provider.cars.length > 0) {
-            setProviderCars(provider.cars);
+        setCarsLoading(true);
+        try {
+            // Always fetch from the primary 'cars' collection
+            const carsFromCollection = await api.getProviderCars(provider.id);
+
+            // Also get legacy embedded cars, if any
+            const embeddedCars = provider.cars || [];
+            
+            // Combine the lists to ensure newly created cars are always shown alongside legacy ones.
+            setProviderCars([...carsFromCollection, ...embeddedCars]);
+
+        } catch (err) {
+            console.error(err);
+            setError('Не удалось загрузить список автомобилей для этого поставщика.');
+        } finally {
             setCarsLoading(false);
-        } else {
-            setCarsLoading(true);
-            try {
-                const cars = await api.getProviderCars(provider.id);
-                setProviderCars(cars);
-            } catch (err) {
-                console.error(err);
-                setError('Не удалось загрузить список автомобилей для этого поставщика.');
-            } finally {
-                setCarsLoading(false);
-            }
         }
     };
 
