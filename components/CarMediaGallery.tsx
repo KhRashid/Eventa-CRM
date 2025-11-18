@@ -26,7 +26,7 @@ const CarMediaGallery: React.FC<CarMediaGalleryProps> = ({ selectedCar, provider
       const updatedPhotos = [...(selectedCar.media?.photos || []), downloadURL];
       const updatedCar: Car = { ...selectedCar, media: { ...selectedCar.media, photos: updatedPhotos } };
       
-      const savedCar = await api.updateCar(updatedCar);
+      const savedCar = await api.updateCar(providerId, updatedCar);
       onCarUpdate(savedCar);
     } catch (error) {
       console.error("Failed to upload photo:", error);
@@ -43,7 +43,7 @@ const CarMediaGallery: React.FC<CarMediaGalleryProps> = ({ selectedCar, provider
     try {
         const updatedPhotos = selectedCar.media.photos.filter((_, index) => index !== indexToDelete);
         const updatedCar = { ...selectedCar, media: { ...selectedCar.media, photos: updatedPhotos } };
-        const savedCar = await api.updateCar(updatedCar);
+        const savedCar = await api.updateCar(providerId, updatedCar);
         onCarUpdate(savedCar);
     } catch (error) {
         console.error("Failed to delete photo:", error);

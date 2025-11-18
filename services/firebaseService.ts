@@ -16,7 +16,6 @@ const singersCollectionRef = db.collection('singers');
 const songsCollectionRef = db.collection('songs');
 const repertoiresCollectionRef = db.collection('repertoires');
 const carProvidersCollectionRef = db.collection('car_providers');
-const carsCollectionRef = db.collection('cars');
 
 
 // Helper to convert Firestore doc to Venue type with backward compatibility
@@ -500,14 +499,11 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
     if (!data) throw new Error(`Document data not found for doc id: ${docSnap.id}`);
 
     const providerData: any = {};
-    // Exclude 'cars' field from top-level processing
-    const { cars, ...restOfData } = data;
-
-    for (const key in restOfData) {
-        if (restOfData[key] instanceof firebase.firestore.Timestamp) {
-            providerData[key] = (restOfData[key] as firebase.firestore.Timestamp).toDate().toISOString();
+    for (const key in data) {
+        if (data[key] instanceof firebase.firestore.Timestamp) {
+            providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
         } else {
-            providerData[key] = restOfData[key];
+            providerData[key] = data[key];
         }
     }
     
@@ -533,30 +529,21 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
         providerData.pickup_points = [];
     }
     
+    // Process embedded cars array if it exists
+    if (data.cars && Array.isArray(data.cars)) {
+        // Augment each car object with provider info to match the Car type
+        providerData.cars = data.cars.map((car: Omit<Car, 'car_provider'>) => ({
+            ...car,
+            car_provider: {
+                car_provider_id: docSnap.id,
+                name: data.name,
+            }
+        }));
+    } else {
+        providerData.cars = [];
+    }
+
     return { id: docSnap.id, ...providerData } as CarProvider;
-};
-
-
-const docToCar = (docSnap: firebase.firestore.DocumentSnapshot): Car => {
-    const data = docSnap.data();
-    if (!data) throw new Error(`Document data not found for doc id: ${docSnap.id}`);
-    
-    const carData: any = {};
-    for (const key in data) {
-        if (data[key] instanceof firebase.firestore.Timestamp) {
-            carData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
-        } else {
-            carData[key] = data[key];
-        }
-    }
-
-    if (!carData.media) {
-        carData.media = { photos: [] };
-    } else if (!carData.media.photos) {
-        carData.media.photos = [];
-    }
-
-    return { id: docSnap.id, ...carData } as Car;
 };
 
 export const getCarProviders = async (): Promise<CarProvider[]> => {
@@ -576,6 +563,7 @@ export const createCarProvider = async (): Promise<CarProvider> => {
         created_at: firebase.firestore.FieldValue.serverTimestamp(),
         updated_at: firebase.firestore.FieldValue.serverTimestamp(),
         pickup_points: [],
+        cars: [],
     };
 
     const docRef = await carProvidersCollectionRef.add(newProviderData);
@@ -610,46 +598,87 @@ export const deleteCarProvider = async (providerId: string): Promise<void> => {
   await carProvidersCollectionRef.doc(providerId).delete();
 };
 
-export const getProviderCars = async (providerId: string): Promise<Car[]> => {
-    const snapshot = await carsCollectionRef
-        .where('car_provider.car_provider_id', '==', providerId)
-        .get();
-    
-    const cars = snapshot.docs.map(docToCar);
-    // Client-side sorting
-    return cars.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-};
-
-// --- Car Top-Level Collection Functions ---
+// --- Car (Embedded in Provider) Functions ---
 export const createCar = async (providerId: string, providerName: string, carData: Omit<Car, 'id'>): Promise<Car> => {
-    const dataWithTimestamp = {
+    const providerDocRef = carProvidersCollectionRef.doc(providerId);
+    
+    const carId = db.collection('cars').doc().id;
+
+    const newCarObjectForArray = {
         ...carData,
+        id: carId,
+        slug: `${carData.brand}-${carData.model}-${carId}`.toLowerCase().replace(/\s+/g, '-'),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    };
+    
+    delete (newCarObjectForArray as any).car_provider;
+
+    await providerDocRef.update({
+        cars: firebase.firestore.FieldValue.arrayUnion(newCarObjectForArray)
+    });
+    
+    return {
+        ...newCarObjectForArray,
         car_provider: {
             car_provider_id: providerId,
-            name: providerName
+            name: providerName,
         },
-        created_at: firebase.firestore.FieldValue.serverTimestamp(),
-        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
     };
-    const docRef = await carsCollectionRef.add(dataWithTimestamp);
-    const newDoc = await docRef.get();
-    return docToCar(newDoc);
 };
 
-export const updateCar = async (car: Car): Promise<Car> => {
-    const { id, ...carData } = car;
-    const dataWithTimestamp = {
-        ...carData,
-        updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+export const updateCar = async (providerId: string, car: Car): Promise<Car> => {
+    const providerDocRef = carProvidersCollectionRef.doc(providerId);
+    const providerDoc = await providerDocRef.get();
+    const providerRawData = providerDoc.data();
+
+    if (!providerDoc.exists || !providerRawData) {
+        throw new Error("Car provider not found");
+    }
+
+    const existingCarsRaw = providerRawData.cars || [];
+
+    const carIndex = existingCarsRaw.findIndex((c: any) => c.id === car.id);
+    if (carIndex === -1) {
+        throw new Error(`Car with id ${car.id} not found in provider ${providerId}`);
+    }
+
+    const { car_provider, ...carDataToEmbed } = car;
+    const updatedCarObjectForStorage = {
+        ...carDataToEmbed,
+        updated_at: new Date().toISOString(),
     };
-    const carDocRef = carsCollectionRef.doc(id);
-    await carDocRef.update(dataWithTimestamp);
-    const updatedDoc = await carDocRef.get();
-    return docToCar(updatedDoc);
+
+    const updatedCarsArray = [...existingCarsRaw];
+    updatedCarsArray[carIndex] = updatedCarObjectForStorage;
+    
+    // This update is not atomic and can cause a race condition.
+    // A transaction would be needed for a fully atomic update.
+    await providerDocRef.update({ cars: updatedCarsArray });
+
+    return car;
 };
 
-export const deleteCar = async (carId: string): Promise<void> => {
-    await carsCollectionRef.doc(carId).delete();
+export const deleteCar = async (providerId: string, carId: string): Promise<void> => {
+    const providerDocRef = carProvidersCollectionRef.doc(providerId);
+    const providerDoc = await providerDocRef.get();
+    const providerRawData = providerDoc.data();
+
+    if (!providerDoc.exists || !providerRawData) {
+        throw new Error("Car provider not found");
+    }
+
+    // Find the exact car object from the raw document data to ensure a perfect match for arrayRemove.
+    const carToRemove = (providerRawData.cars || []).find((c: any) => c.id === carId);
+
+    if (carToRemove) {
+        // Use atomic arrayRemove operation to prevent race conditions.
+        await providerDocRef.update({
+            cars: firebase.firestore.FieldValue.arrayRemove(carToRemove)
+        });
+    } else {
+        throw new Error(`Car with id ${carId} not found for deletion.`);
+    }
 };
 
 export const uploadCarPhoto = async (carId: string, file: File): Promise<string> => {
