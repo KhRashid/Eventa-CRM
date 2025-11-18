@@ -503,8 +503,8 @@ const docToCarProvider = (docSnap: firebase.firestore.DocumentSnapshot): CarProv
     for (const key in data) {
         if (data[key] instanceof firebase.firestore.Timestamp) {
             providerData[key] = (data[key] as firebase.firestore.Timestamp).toDate().toISOString();
-        } else if (key !== 'cars') { // Ignore embedded cars array
-            providerData[key] = data[key];
+        } else {
+             providerData[key] = data[key];
         }
     }
     
@@ -610,10 +610,10 @@ export const deleteCarProvider = async (providerId: string): Promise<void> => {
 export const getProviderCars = async (providerId: string): Promise<Car[]> => {
     const snapshot = await carsCollectionRef
         .where('car_provider.car_provider_id', '==', providerId)
-        .orderBy('created_at', 'desc')
         .get();
     const cars = snapshot.docs.map(docToCar);
-    return cars;
+    // Client-side sorting
+    return cars.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 };
 
 // --- Car Top-Level Collection Functions ---
