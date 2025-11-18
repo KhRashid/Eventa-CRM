@@ -5,12 +5,11 @@ import * as api from '../services/firebaseService';
 
 interface CarMediaGalleryProps {
   selectedCar: Car | null;
-  providerId: string | undefined;
   onCarUpdate: (updatedCar: Car) => void;
   permissions: Set<string>;
 }
 
-const CarMediaGallery: React.FC<CarMediaGalleryProps> = ({ selectedCar, providerId, onCarUpdate, permissions }) => {
+const CarMediaGallery: React.FC<CarMediaGalleryProps> = ({ selectedCar, onCarUpdate, permissions }) => {
   const [isUploading, setIsUploading] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   
@@ -18,7 +17,7 @@ const CarMediaGallery: React.FC<CarMediaGalleryProps> = ({ selectedCar, provider
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !selectedCar?.id || !providerId) return;
+    if (!file || !selectedCar?.id) return;
 
     setIsUploading(true);
     try {
@@ -38,7 +37,7 @@ const CarMediaGallery: React.FC<CarMediaGalleryProps> = ({ selectedCar, provider
   };
 
   const handleDeletePhoto = async (indexToDelete: number) => {
-    if (!selectedCar || !providerId || !window.confirm("Вы уверены, что хотите удалить это фото?")) return;
+    if (!selectedCar || !window.confirm("Вы уверены, что хотите удалить это фото?")) return;
     
     try {
         const updatedPhotos = selectedCar.media.photos.filter((_, index) => index !== indexToDelete);
@@ -50,14 +49,6 @@ const CarMediaGallery: React.FC<CarMediaGalleryProps> = ({ selectedCar, provider
         alert("Не удалось удалить фото.");
     }
   };
-
-  if (!providerId) {
-     return (
-      <div className="bg-gray-800 rounded-lg p-6 h-full flex items-center justify-center">
-        <p className="text-gray-400">Выберите поставщика.</p>
-      </div>
-    );
-  }
 
   if (!selectedCar) {
     return (
