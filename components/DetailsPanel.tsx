@@ -63,6 +63,8 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
 
   const venueLookups = lookups.filter(lookup => {
     const key = lookup.key;
+    if (!key) return false;
+
     const irrelevantPrefixes = ['car_', 'singer_', 'song_'];
     const irrelevantKeys = ['menu_item_categories', 'city_codes', 'genres', 'languages'];
 

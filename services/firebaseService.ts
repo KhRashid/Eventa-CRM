@@ -637,6 +637,11 @@ export const updateCar = async (providerId: string, car: Car): Promise<Car> => {
     }
 
     const existingCarsRaw = providerRawData.cars || [];
+    
+    // Safety check if cars is not an array (e.g. corrupted data)
+    if (!Array.isArray(existingCarsRaw)) {
+        throw new Error(`Cars data is malformed for provider ${providerId}`);
+    }
 
     const carIndex = existingCarsRaw.findIndex((c: any) => c.id === car.id);
     if (carIndex === -1) {
@@ -656,7 +661,11 @@ export const updateCar = async (providerId: string, car: Car): Promise<Car> => {
     // A transaction would be needed for a fully atomic update.
     await providerDocRef.update({ cars: updatedCarsArray });
 
-    return car;
+    // Return the updated car with the new timestamp so the UI reflects it correctly
+    return {
+        ...car,
+        updated_at: updatedCarObjectForStorage.updated_at
+    };
 };
 
 export const deleteCar = async (providerId: string, carId: string): Promise<void> => {
@@ -668,8 +677,13 @@ export const deleteCar = async (providerId: string, carId: string): Promise<void
         throw new Error("Car provider not found");
     }
 
+    const carsArray = providerRawData.cars || [];
+    if (!Array.isArray(carsArray)) {
+        throw new Error(`Cars data is malformed for provider ${providerId}`);
+    }
+
     // Find the exact car object from the raw document data to ensure a perfect match for arrayRemove.
-    const carToRemove = (providerRawData.cars || []).find((c: any) => c.id === carId);
+    const carToRemove = carsArray.find((c: any) => c.id === carId);
 
     if (carToRemove) {
         // Use atomic arrayRemove operation to prevent race conditions.
