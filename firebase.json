@@ -3,14 +3,14 @@
     "hosting": {
       "public": "dist",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+      "rewrites": [{ "source": "/crm/**", "destination": "/crm/index.html" }]
     }
   },
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
-      { "source": "/crm/**", "destination": "/crm/index.html" }
+      { "source": "**", "destination": "/index.html" }
     ]
   }
 }
