@@ -155,11 +155,22 @@ const App: React.FC = () => {
     }
   };
 
-  const handleVenueDelete = (venueId: string) => {
-      const updatedVenues = venues.filter(v => v.id !== venueId);
-      setVenues(updatedVenues);
-      setSelectedVenue(null);
-      setIsEditing(false);
+  const handleVenueDelete = async (venueId: string) => {
+      if (window.confirm("Вы уверены, что хотите удалить этот ресторан?")) {
+        try {
+            // FIX: Call the API to delete from Firestore
+            await api.deleteData(venueId);
+            
+            // Update local state
+            const updatedVenues = venues.filter(v => v.id !== venueId);
+            setVenues(updatedVenues);
+            setSelectedVenue(null);
+            setIsEditing(false);
+        } catch (err) {
+            console.error("Failed to delete venue:", err);
+            setError('Не удалось удалить ресторан. Попробуйте еще раз.');
+        }
+      }
   };
 
   const handleLogout = async () => {
