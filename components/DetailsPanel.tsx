@@ -162,6 +162,11 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
     .map(id => allMenuPackages.find(p => p.id === id))
     .filter((p): p is MenuPackage => p !== undefined);
 
+  // Calculate price range from assigned packages
+  const packagePrices = assignedPackages.map(p => p.price_azn);
+  const minPrice = packagePrices.length > 0 ? Math.min(...packagePrices) : (venue.policies?.price_per_person_azn_from ?? 0);
+  const maxPrice = packagePrices.length > 0 ? Math.max(...packagePrices) : (venue.policies?.price_per_person_azn_to ?? 0);
+
   return (
     <div className="bg-gray-800 rounded-lg h-full flex flex-col overflow-hidden">
         {/* Sticky Header */}
@@ -204,7 +209,7 @@ const DetailsPanel: React.FC<DetailsPanelProps> = ({ venue, onVenueUpdate, onVen
                     <div className="py-3">
                         <dt className="text-sm font-medium text-gray-400 mb-2">Условия</dt>
                         <dd className="pl-4 border-l-2 border-gray-600">
-                            <DetailItem label="Цена на человека" value={`От ${venue.policies.price_per_person_azn_from} до ${venue.policies.price_per_person_azn_to} AZN`} />
+                            <DetailItem label="Цена на человека" value={`От ${minPrice} до ${maxPrice} AZN`} />
                             <DetailItem label="Алкоголь разрешен" value={venue.policies.alcohol_allowed ? 'Да' : 'Нет'} />
                             <DetailItem label="Свой кейтеринг" value={venue.policies.outside_catering_allowed ? 'Да' : 'Нет'} />
                             <DetailItem label="Пробковый сбор" value={`${venue.policies.corkage_fee_azn} AZN`} />

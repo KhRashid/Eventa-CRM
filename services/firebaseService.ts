@@ -3,7 +3,7 @@ import "firebase/compat/firestore";
 import "firebase/compat/storage";
 import "firebase/compat/auth";
 import { db, storage, auth } from '../firebaseConfig';
-import { Venue, UserProfile, Role, UserWithRoles, Lookup, MenuItem, MenuPackage, Singer, PricingPackage, Song, Repertoire, CarProvider, Car } from '../types';
+import { Venue, UserProfile, Role, UserWithRoles, Lookup, MenuItem, MenuPackage, Singer, PricingPackage, Song, Repertoire, CarProvider, Car, Policies } from '../types';
 import { INITIAL_ROLES } from "../constants";
 
 const venuesCollectionRef = db.collection('venues');
@@ -44,6 +44,17 @@ const docToVenue = (docSnap: firebase.firestore.DocumentSnapshot): Venue => {
                 venueData[key] = data[key];
             }
         }
+        
+        // Ensure policies has defaults if missing or incomplete
+        venueData.policies = {
+            alcohol_allowed: false,
+            corkage_fee_azn: 0,
+            outside_catering_allowed: false,
+            price_per_person_azn_from: 0,
+            price_per_person_azn_to: 0,
+            ...(venueData.policies || {})
+        };
+
         return venueData;
     };
 
